@@ -1,4 +1,4 @@
-﻿Name,Type,RA,Dec,Redshift,Brightness,Band,Solar Mass,Solar Radius,Semi-Major Axis,Orbital Period,Eccentricity,Inclination,Angular distance,ω,T Period,Primary transit,Impact Parameter b,Velocity Semiamplitude K,Calculated temperature,IsDiscoveryTarget,IsCelestial,Reason,source_file,source_chunk,source_pages
+﻿Name,Type,RA,Dec,Redshift,Brightness,Band,Solar Mass,Solar Radius,Semi-Major Axis,Orbital Period,Eccentricity,Inclination,Angular distance,ω,T Period,Primary transit,Impact Parameter b,Velocity Semiamplitude K,Calculated temperature,IsDiscoveryTarget,IsCelestial,Reason,paper_id,source_chunk,source_pages
 LHS 1903,Red dwarf,,,,,,,,,,,,,,,,,,,0,1,Mentioned in the title of the paper as the host star of a four-planet system,2602_11271,1,1-1
 KMT-2022-BLG-1818Lb,Exoplanet,,,,,,,,,,,,,,,,,,,1,1,Mentioned in the title of the paper,2505_05093,1,1-1
 KMT-2022-BLG-1818Lc,Exoplanet,,,,,,,,,,,,,,,,,,,1,1,Mentioned in the title of the paper,2505_05093,1,1-1
