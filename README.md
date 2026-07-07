@@ -14,6 +14,17 @@ Jun-Hao Peng, Yi-Cheng Rui, Peng-Ju Wang, Wen-Yong Kang, Yu-Long Gao, Zheng-Jun 
 
 ---
 
+## Contents
+
+- Overview
+- Repository Structure
+- Installation
+- Usage
+- Benchmark Results
+- Data Availability
+- Citation
+- License
+
 # Overview
 
 This repository contains the official implementation and experimental results for an automated literature-mining pipeline that constructs structured celestial catalogs directly from astrophysical papers using Large Language Models (LLMs).
