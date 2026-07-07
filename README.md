@@ -1,10 +1,14 @@
 # Automatic Celestial Catalog Extraction Using Large Language Models
 
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg)
-![arXiv](https://img.shields.io/badge/arXiv-XXXX.XXXXX-B31B1B.svg)
+<p align="center">
 
-Official implementation of the paper:
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
+[![arXiv](https://img.shields.io/badge/arXiv-XXXX.XXXXX-B31B1B.svg)]()
+
+</p>
+
+Official implementation of the paper
 
 > **Automatic Celestial Catalog Extraction Using Large Language Models**
 
@@ -14,89 +18,83 @@ Jun-Hao Peng, Yi-Cheng Rui, Peng-Ju Wang, Wen-Yong Kang, Yu-Long Gao, Zheng-Jun 
 
 ---
 
-## Contents
+## Overview
 
-- Overview
-- Repository Structure
-- Installation
-- Usage
-- Benchmark Results
-- Data Availability
-- Citation
-- License
+Large Language Models (LLMs) have recently demonstrated remarkable capabilities in scientific document understanding. This repository presents an automated pipeline for constructing celestial catalogs directly from astrophysical literature by combining large-scale arXiv retrieval, semantic paper filtering, and LLM-based information extraction.
 
-# Overview
+Unlike conventional object-oriented catalogs, our database adopts a **literature-centric** organization, where every extracted record preserves its original publication provenance, allowing multiple independent measurements of the same object to coexist.
+
+The complete workflow consists of two major stages:
+
+1. **Paper Filtering**
+   - Automatically screens approximately **340,000** arXiv astrophysical papers.
+   - Identifies publications containing brown dwarf observations.
+
+2. **Catalog Extraction**
+   - Downloads PDFs automatically.
+   - Extracts celestial objects and physical parameters.
+   - Preserves literature provenance.
+   - Produces a structured CSV catalog.
+
+---
 
 ## Pipeline
 
 <p align="center">
-  <img src="Figures/Pipeline.png" width="900">
+<img src="Figures/Pipeline.png" width="900">
 </p>
 
-Overview of the automated literature-mining pipeline.
-
-This repository contains the official implementation and experimental results for an automated literature-mining pipeline that constructs structured celestial catalogs directly from astrophysical papers using Large Language Models (LLMs).
-
-Unlike traditional rule-based information extraction systems, our framework performs semantic understanding of full-text scientific papers and automatically extracts celestial objects together with their reported physical parameters while preserving literature provenance.
-
-The pipeline consists of two major stages:
-
-1. **Paper Filtering**
-   - Automatically screens approximately **340,000** arXiv astrophysics papers.
-   - Identifies publications containing brown dwarf observations.
-
-2. **Catalog Extraction**
-   - Extracts celestial objects and reported physical parameters.
-   - Produces a structured literature-centric catalog with complete provenance information.
+**Figure 2.** Overview of the automated literature-mining pipeline used for constructing the brown dwarf catalog.
 
 ---
 
-# Key Results
+## Highlights
+
+- Automated processing of **340,000+** arXiv papers
+- Literature-centric astronomical catalog
+- Provenance-preserving information extraction
+- Parallel PDF processing
+- Multi-model LLM benchmark
+- Reproducible scientific analysis
+- Publication-quality figures
+- Brown dwarf catalog containing **21,989** unique objects
+
+---
+
+## Key Results
 
 | Metric | Result |
 |---------|--------|
 | Papers processed | **1,410** |
 | Unique brown dwarfs | **21,989** |
 | Measurement records | **49,546** |
-| Processing time | **~25 min** |
+| Processing time | **~25 minutes** |
 | Total API cost | **$14.83** |
-| Best extraction model | **DeepSeek-V4-Flash** |
+| Selected model | **DeepSeek-V4-Flash** |
 | Best F1 score | **94.67%** |
 
 ---
 
-# Features
+## Repository Structure
 
-- Automatic literature screening from arXiv
-- Large Language Model based information extraction
-- Literature-centric catalog construction
-- Provenance preservation
-- Structured physical parameter extraction
-- Parallel PDF processing
-- Multi-model benchmarking
-- Fully reproducible analysis pipeline
-
----
-
-# Repository Structure
-
-```
+```text
 .
-├── Figures/
+├── Figures/                                   # Figures used in the paper
+│   ├── Pipeline.png
 │   ├── Pipeline.pdf
-│   ├── age_temp_cooling_evolution.pdf
 │   ├── arxiv_astrophysics_yearly.pdf
 │   ├── catalog_summary.pdf
+│   ├── age_temp_cooling_evolution.pdf
 │   ├── kinematic_analysis.pdf
 │   └── mass_semimajor.pdf
 │
-├── analysis_experiment/
-│   ├── age_temp_cooling_evolution.py
+├── analysis_experiment/                       # Scripts for reproducing figures
 │   ├── catalog_summary.py
+│   ├── age_temp_cooling_evolution.py
 │   ├── kinematic_analysis.py
 │   └── mass_semimajor.py
 │
-├── valid_experiments/
+├── valid_experiments/                         # LLM benchmark experiments
 │   ├── dataset.xlsx
 │   ├── metric.py
 │   ├── test_set.json
@@ -108,35 +106,114 @@ The pipeline consists of two major stages:
 │   ├── valid_set_gpt_5_4_mini.csv
 │   └── valid_set_qwen_long.csv
 │
-├── brown_dwarf.csv
-├── config.py
-├── extraction_chain_stream_parallel.py
-├── filter_chain.py
-├── prompts.py
-├── requirements.txt
-├── validate_brown_dwarf.json
+├── brown_dwarf.csv                            # Final brown dwarf catalog
+├── config.py                                 # Configuration file
+├── extraction_chain_stream_parallel.py        # Main extraction pipeline
+├── filter_chain.py                           # Paper filtering pipeline
+├── prompts.py                               # Prompt templates
+├── requirements.txt                         # Python dependencies
+├── validate_brown_dwarf.json                # Filtered paper list
 └── README.md
-
 ```
-
-## Directory Description
-
-| Directory | Description |
-|------------|-------------|
-| Figures | All figures used in the paper |
-| analysis_experiment | Scripts for reproducing all figures |
-| valid_experiments | LLM benchmark datasets and evaluation |
-| brown_dwarf.csv | Final extracted brown dwarf catalog |
-| filter_chain.py | Paper filtering pipeline |
-| extraction_chain_stream_parallel.py | Main extraction pipeline |
-| prompts.py | Prompt templates |
-| config.py | Configuration file |
 
 ---
 
-# Installation
+## Repository Description
 
-## 1. Clone the Repository
+| File / Directory | Description |
+|------------------|-------------|
+| **Figures/** | Publication-quality figures used in the paper |
+| **analysis_experiment/** | Scripts for reproducing all scientific figures |
+| **valid_experiments/** | Benchmark datasets and evaluation results |
+| **brown_dwarf.csv** | Final literature-centric brown dwarf catalog |
+| **filter_chain.py** | LLM-based paper filtering from arXiv |
+| **extraction_chain_stream_parallel.py** | Parallel extraction pipeline |
+| **prompts.py** | Prompt templates used for information extraction |
+| **config.py** | API configuration and runtime settings |
+| **requirements.txt** | Required Python packages |
+
+---
+
+## Repository Contents
+
+This repository contains four major components.
+
+### 1. Extraction Pipeline
+
+The complete LLM-based extraction framework for automatically constructing celestial catalogs from astrophysical literature.
+
+Main modules include
+
+- paper filtering
+- PDF downloading
+- document chunking
+- LLM inference
+- result aggregation
+- duplicate removal
+- catalog generation
+
+---
+
+### 2. Benchmark Dataset
+
+The manually annotated benchmark used for evaluating different Large Language Models.
+
+Included files
+
+- validation dataset
+- test dataset
+- prediction outputs
+- evaluation scripts
+
+---
+
+### 3. Scientific Analysis
+
+Scripts used to generate all figures presented in the paper, including
+
+- parameter distributions
+- cooling evolution
+- kinematic analysis
+- orbital properties
+
+All figures can be reproduced directly from the released catalog.
+
+---
+
+### 4. Brown Dwarf Catalog
+
+The released catalog contains
+
+- **21,989** unique brown dwarfs
+- **49,546** literature measurement records
+
+Each record preserves the original publication provenance, enabling literature-level analyses instead of only object-level summaries.
+
+---
+
+
+## Installation
+
+### Requirements
+
+The pipeline has been tested under the following environment.
+
+| Package | Version |
+|----------|---------|
+| Python | 3.11+ |
+| pandas | Latest |
+| numpy | Latest |
+| scipy | Latest |
+| matplotlib | Latest |
+| requests | Latest |
+| PyMuPDF | Latest |
+| pdfplumber | Latest |
+| langchain | Latest |
+| openai | Latest |
+
+---
+
+### Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/Automatic-Celestial-Catalog-Extraction.git
@@ -146,86 +223,61 @@ cd Automatic-Celestial-Catalog-Extraction
 
 ---
 
-## 2. Create a Python Environment
+### Create a Virtual Environment
 
-We recommend using Python **3.11** or newer.
-
-Using `venv`:
+Using **venv**
 
 ```bash
 python -m venv venv
 ```
 
-Activate the environment:
-
-### Linux / macOS
+Linux / macOS
 
 ```bash
 source venv/bin/activate
 ```
 
-### Windows
+Windows
 
 ```bash
 venv\Scripts\activate
 ```
 
-Alternatively, using Conda:
+Alternatively, using Conda
 
 ```bash
 conda create -n celestial python=3.11
+
 conda activate celestial
 ```
 
 ---
 
-## 3. Install Dependencies
+### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Typical dependencies include
-
-- pandas
-- numpy
-- matplotlib
-- scipy
-- requests
-- tqdm
-- PyMuPDF
-- pdfplumber
-- openai
-- langchain
-- langchain-core
-- langchain-openai
-- pydantic
-
 ---
 
-# Configuration
+## Configuration
 
-The pipeline requires API keys for one or more supported LLM providers.
+Before running the pipeline, configure the required API keys.
 
-Create a file named
+The recommended approach is to create a `.env` file in the project root.
 
-```text
-.env
-```
-
-under the project root.
-
-Example:
+Example
 
 ```text
-DEEPSEEK_API_KEY=your_deepseek_api_key
-OPENAI_API_KEY=your_openai_api_key
-QWEN_API_KEY=your_qwen_api_key
-BAIDU_API_KEY=your_baidu_api_key
-AIHUBMIX_API_KEY=your_aihubmix_api_key
+DEEPSEEK_API_KEY=xxxxxxxxxxxxxxxx
+OPENAI_API_KEY=xxxxxxxxxxxxxxxx
+QWEN_API_KEY=xxxxxxxxxxxxxxxx
+BAIDU_API_KEY=xxxxxxxxxxxxxxxx
+AIHUBMIX_API_KEY=xxxxxxxxxxxxxxxx
 ```
 
-Alternatively, the keys can be configured directly inside
+Alternatively, the API keys can be specified directly in
 
 ```text
 config.py
@@ -235,38 +287,34 @@ depending on your deployment environment.
 
 ---
 
-# Input Data
+## Input Data
 
-The pipeline expects a list of candidate papers obtained from arXiv.
+The pipeline accepts astrophysical papers obtained from the arXiv repository.
 
-The filtering stage automatically identifies brown dwarf related publications.
+The filtering stage automatically identifies brown dwarf related publications from the downloaded metadata.
 
-Input files include
+The paper list used in this work is provided as
 
-```
+```text
 validate_brown_dwarf.json
 ```
 
-which stores the filtered paper list used in the paper.
-
-The extraction stage downloads PDFs automatically and processes them in parallel.
-
 ---
 
-# Output
+## Output
 
-The final structured catalog is exported as
+The final catalog is exported as
 
 ```text
 brown_dwarf.csv
 ```
 
-Each record corresponds to a single literature report rather than a merged object entry.
+Each row corresponds to **one literature report** rather than one merged object.
 
 Representative fields include
 
 | Field | Description |
-|------|-------------|
+|---------|-------------|
 | Name | Object name |
 | SpectralType | Spectral classification |
 | Mass_MJ | Mass |
@@ -279,45 +327,46 @@ Representative fields include
 | RadialVelocity_km_s | Radial velocity |
 | Age_Gyr | Age |
 | Metallicity | Metallicity |
-| DiscoveryReference | Discovery paper |
-| DOI | Paper DOI |
 | PaperID | arXiv identifier |
+| DOI | Paper DOI |
 | Page | Source page |
-| Text | Original extracted text |
+| Text | Original extracted paragraph |
 
-All quantities preserve the original values reported in the literature whenever possible.
-
----
-
-# Supported Models
-
-The extraction framework supports multiple Large Language Models through a unified interface.
-
-Current implementations include
-
-- DeepSeek-V4-Flash
-- DeepSeek-V4-Pro
-- GPT-5.4-Mini
-- Claude-Haiku-4.5
-- Gemini-3.5-Flash
-- Qwen-Long
-
-Additional models can be incorporated by modifying the model configuration in `config.py`.
+The catalog preserves the original values reported in the literature whenever possible instead of replacing them with normalized or merged measurements.
 
 ---
 
-# Usage
+## Supported Models
+
+The extraction framework currently supports multiple Large Language Models through a unified interface.
+
+| Model | Status |
+|---------|--------|
+| DeepSeek-V4-Flash | ✅ |
+| DeepSeek-V4-Pro | ✅ |
+| GPT-5.4-Mini | ✅ |
+| Claude-Haiku-4.5 | ✅ |
+| Gemini-3.5-Flash | ✅ |
+| Qwen-Long | ✅ |
+
+Additional models can be integrated by modifying the configuration in `config.py`.
+
+---
+
+## Usage
 
 The complete workflow consists of two sequential stages:
 
-1. Paper filtering
-2. Catalog extraction
+1. **Paper Filtering**
+2. **Catalog Extraction**
+
+The pipeline is fully automated and supports parallel processing.
 
 ---
 
-# Step 1 — Filter Relevant Papers
+## Step 1. Paper Filtering
 
-Screen astrophysical papers downloaded from arXiv and identify publications containing brown dwarf observations.
+The first stage identifies publications relevant to brown dwarf studies from the downloaded arXiv metadata.
 
 Run
 
@@ -325,19 +374,19 @@ Run
 python filter_chain.py
 ```
 
-Output:
+Output
 
-```
+```text
 validate_brown_dwarf.json
 ```
 
-which contains all papers selected for catalog extraction.
+This file contains all papers selected for the extraction stage.
 
 ---
 
-# Step 2 — Extract the Catalog
+## Step 2. Catalog Extraction
 
-Run the main extraction pipeline
+Run the extraction pipeline
 
 ```bash
 python extraction_chain_stream_parallel.py
@@ -347,13 +396,12 @@ The pipeline automatically performs
 
 - PDF downloading
 - PDF chunking
-- Parallel processing
-- LLM inference
-- Result aggregation
-- Duplicate removal
-- CSV export
+- parallel LLM inference
+- structured information extraction
+- duplicate checking
+- CSV generation
 
-The final catalog will be written to
+The final catalog is exported as
 
 ```text
 brown_dwarf.csv
@@ -361,21 +409,31 @@ brown_dwarf.csv
 
 ---
 
-# Optional Arguments
+## Optional Arguments
 
-Force reprocessing of all papers
+### Force Reprocessing
+
+Ignore cached results and reprocess all papers.
 
 ```bash
 python extraction_chain_stream_parallel.py --force
 ```
 
-Retry only failed papers
+---
+
+### Retry Failed Papers
+
+Only process papers that previously failed.
 
 ```bash
 python extraction_chain_stream_parallel.py --retry-failed
 ```
 
-Specify the number of parallel workers
+---
+
+### Parallel Processing
+
+Specify the number of workers.
 
 ```bash
 python extraction_chain_stream_parallel.py \
@@ -383,17 +441,45 @@ python extraction_chain_stream_parallel.py \
     --chunk-workers 20
 ```
 
+Increasing the number of workers generally improves throughput but also increases API concurrency.
+
 ---
 
-# Evaluation
-
-Model performance can be reproduced using the benchmark dataset provided in
+## Pipeline Workflow
 
 ```
-valid_experiments/
+arXiv Metadata
+      │
+      ▼
+Paper Filtering
+      │
+      ▼
+Download PDFs
+      │
+      ▼
+PDF Chunking
+      │
+      ▼
+Parallel LLM Extraction
+      │
+      ▼
+Structured JSON
+      │
+      ▼
+Duplicate Checking
+      │
+      ▼
+CSV Catalog
+      │
+      ▼
+Scientific Analysis
 ```
 
-Run
+---
+
+## Benchmark Evaluation
+
+To reproduce the benchmark reported in the paper
 
 ```bash
 cd valid_experiments
@@ -401,25 +487,25 @@ cd valid_experiments
 python metric.py
 ```
 
-The script computes
+The evaluation computes
 
 - Precision
 - Recall
-- F1 score
+- F1 Score
 
-for every evaluated model.
+for all supported Large Language Models.
 
 ---
 
-# Reproducing Figures
+## Reproducing Figures
 
 All analysis scripts are located in
 
-```
+```text
 analysis_experiment/
 ```
 
-## Figure 3
+### Figure 3
 
 Physical parameter distributions
 
@@ -429,7 +515,7 @@ python analysis_experiment/catalog_summary.py
 
 ---
 
-## Figure 4
+### Figure 4
 
 Cooling evolution
 
@@ -439,7 +525,7 @@ python analysis_experiment/age_temp_cooling_evolution.py
 
 ---
 
-## Figure 5
+### Figure 5
 
 Brown dwarf kinematics
 
@@ -449,7 +535,7 @@ python analysis_experiment/kinematic_analysis.py
 
 ---
 
-## Figure 6
+### Figure 6
 
 Mass versus semi-major axis
 
@@ -459,75 +545,17 @@ python analysis_experiment/mass_semimajor.py
 
 All figures are exported into
 
-```
+```text
 Figures/
 ```
 
-in PDF format suitable for publication.
+in publication-quality PDF format.
 
 ---
 
-# Pipeline Overview
+## Reproducibility
 
-The automated workflow is summarized below.
-
-```
-arXiv
-
-   │
-
-   ▼
-
-Paper Filtering
-
-   │
-
-   ▼
-
-PDF Download
-
-   │
-
-   ▼
-
-PDF Chunking
-
-   │
-
-   ▼
-
-Parallel LLM Extraction
-
-   │
-
-   ▼
-
-Structured JSON
-
-   │
-
-   ▼
-
-Duplicate Checking
-
-   │
-
-   ▼
-
-CSV Catalog
-
-   │
-
-   ▼
-
-Scientific Analysis
-```
-
----
-
-# Reproducibility
-
-The repository contains everything required to reproduce the experiments reported in the paper, including
+This repository contains everything required to reproduce the experiments reported in the paper, including
 
 - benchmark datasets
 - evaluation scripts
@@ -536,172 +564,263 @@ The repository contains everything required to reproduce the experiments reporte
 - generated figures
 - extracted catalog
 
-Running the pipeline with the same configuration should reproduce results that are consistent with those reported in the manuscript, subject to minor variations introduced by stochastic LLM inference.
+Running the pipeline with the same configuration should reproduce results that are consistent with those presented in the manuscript, subject to minor stochastic variations introduced by LLM inference.
 
 ---
 
-# LLM Benchmark Results
+## LLM Benchmark Results
 
-To evaluate the effectiveness of different Large Language Models for astronomical information extraction, we constructed a manually annotated benchmark consisting of
+To evaluate the effectiveness of Large Language Models for astronomical information extraction, we constructed a manually annotated benchmark consisting of
 
-- **Validation set:** 60 papers, 2,818 annotated entities
-- **Test set:** 60 papers, 1,511 annotated entities
+- **Validation set:** 60 papers containing **2,818** annotated entities
+- **Test set:** 60 papers containing **1,511** annotated entities
 
-The benchmark evaluates both object identification and structured parameter extraction.
+The benchmark evaluates both celestial object identification and structured parameter extraction.
 
 ---
 
-## Performance Comparison
+### Performance Comparison
 
 | Model | Precision ↑ | Recall ↑ | F1 ↑ | API Time ↓ | Total Time ↓ | Cost ↓ |
-|------|------------:|----------:|------:|-----------:|-------------:|--------:|
+|:------|------------:|---------:|------:|-----------:|-------------:|--------:|
 | Gemini-3.5-Flash | 94.95% | 88.15% | 91.42% | 23.82 s | 5811.4 s | $69.01 |
 | Claude-Haiku-4.5 | 96.04% | 56.00% | 70.75% | 7.84 s | 2657.4 s | $21.06 |
 | GPT-5.4-Mini | 92.21% | 72.25% | 81.02% | **3.56 s** | **888.8 s** | $6.29 |
 | DeepSeek-V4-Pro | **97.00%** | **94.14%** | **95.55%** | 51.90 s | 18343.8 s | $6.86 |
-| **DeepSeek-V4-Flash** | **96.81%** | **92.62%** | **94.67%** | 19.83 s | 4762.4 s | $1.47 |
+| **DeepSeek-V4-Flash** | 96.81% | 92.62% | **94.67%** | 19.83 s | 4762.4 s | $1.47 |
 | Qwen-Long | 96.00% | 86.94% | 91.25% | 12.58 s | 4461.0 s | **$0.80** |
 
 ---
 
-## Model Selection
+### Model Selection
 
-Among all evaluated models, **DeepSeek-V4-Flash** provides the best overall balance between
+Among all evaluated models, **DeepSeek-V4-Flash** provides the best overall trade-off between
 
 - extraction accuracy,
 - inference efficiency,
 - deployment cost, and
-- large-scale scalability.
+- scalability.
 
-Therefore, it was adopted as the default model for constructing the full brown dwarf catalog presented in this work.
+Consequently, it was selected as the default model for constructing the complete brown dwarf catalog presented in this work.
 
 ---
 
-## Benchmark Dataset
+### Benchmark Dataset
 
-The complete benchmark is available in
+The complete benchmark is provided in
 
-```
+```text
 valid_experiments/
 ```
 
 including
 
-```
+```text
 dataset.xlsx
 metric.py
-test_set.json
 valid_set.json
+test_set.json
 ```
 
-as well as the prediction outputs of all evaluated models.
+together with the prediction outputs generated by all evaluated models.
 
 ---
 
-## Evaluation Metrics
+### Evaluation Metrics
 
-The benchmark reports three standard information extraction metrics.
+The benchmark reports the three standard information extraction metrics.
 
-### Precision
-
-\[
-\mathrm{Precision}
-=
-\frac{TP}{TP+FP}
-\]
-
-Measures the fraction of extracted entities that are correct.
-
----
-
-### Recall
-
-\[
-\mathrm{Recall}
-=
-\frac{TP}{TP+FN}
-\]
-
-Measures the fraction of ground-truth entities successfully extracted.
-
----
-
-### F1 Score
-
-\[
-F1
-=
-\frac{2PR}{P+R}
-\]
-
-where
-
-- **P** denotes Precision
-- **R** denotes Recall
+| Metric | Description |
+|---------|-------------|
+| Precision | Fraction of extracted entities that are correct |
+| Recall | Fraction of annotated entities successfully extracted |
+| F1 Score | Harmonic mean of Precision and Recall |
 
 The F1 score is used as the primary evaluation metric throughout the paper.
 
 ---
 
-## Cost Analysis
+### Discussion
 
 The benchmark demonstrates that extraction quality is not solely determined by model size.
 
-For example,
-
-- DeepSeek-V4-Pro achieved the highest F1 score but required the longest inference time.
-- GPT-5.4-Mini exhibited the fastest inference speed.
-- Qwen-Long achieved the lowest monetary cost.
-- DeepSeek-V4-Flash offered the most favorable trade-off between accuracy, runtime, and cost.
+- **DeepSeek-V4-Pro** achieved the highest overall extraction accuracy.
+- **GPT-5.4-Mini** exhibited the fastest inference speed.
+- **Qwen-Long** achieved the lowest monetary cost.
+- **DeepSeek-V4-Flash** provided the most balanced performance and was therefore adopted for large-scale catalog construction.
 
 ---
 
-## Scalability
+### Large-scale Deployment
 
-Using the selected DeepSeek-V4-Flash model, the complete pipeline processed
+Using **DeepSeek-V4-Flash**, the complete pipeline processed
 
-- **1,410 papers**
-- **21,989 brown dwarfs**
-- **49,546 measurement records**
+- **1,410** astrophysical papers,
+- **21,989** unique brown dwarfs,
+- **49,546** literature measurement records,
 
-within approximately **25 minutes** at a total API cost of **$14.83**, demonstrating that LLM-based astronomical catalog construction is practical for large-scale literature mining.
+within approximately **25 minutes** at a total API cost of **$14.83**, demonstrating the practicality of LLM-based astronomical catalog construction for large-scale literature mining.
+
+---
+
+---
+
+# Scientific Results
+
+The literature-centric brown dwarf catalog enables a variety of statistical analyses that are difficult to perform using conventional object-oriented catalogs.
+
+## Catalog Statistics
+
+The current release contains
+
+| Property | Value |
+|----------|------:|
+| Processed papers | 1,410 |
+| Unique brown dwarfs | 21,989 |
+| Literature records | 49,546 |
+| Objects with spectral classifications | 11,884 |
+| Objects appearing in multiple papers | 2,413 |
+| Objects with multiple spectral classifications | 1,735 |
+
+Unlike conventional catalogs, every record preserves its original literature provenance, allowing users to trace the evolution of published measurements over time.
+
+---
+
+## Figure 1. arXiv Paper Statistics
+
+<p align="center">
+<img src="Figures/arxiv_astrophysics_yearly.pdf" width="700">
+</p>
+
+Annual statistics of astrophysics papers collected from the arXiv repository and the subset selected for brown dwarf catalog construction.
+
+---
+
+## Figure 2. Extraction Pipeline
+
+<p align="center">
+<img src="Figures/Pipeline.pdf" width="850">
+</p>
+
+Overview of the automated extraction framework, including paper filtering, PDF processing, LLM-based information extraction, and catalog generation.
+
+---
+
+## Figure 3. Catalog Summary
+
+<p align="center">
+<img src="Figures/catalog_summary.pdf" width="850">
+</p>
+
+Statistical distributions of the physical parameters preserved in the literature-centric catalog.
+
+---
+
+## Figure 4. Brown Dwarf Cooling Evolution
+
+<p align="center">
+<img src="Figures/age_temp_cooling_evolution.pdf" width="850">
+</p>
+
+Relationships among effective temperature, age, and mass for brown dwarfs with complete evolutionary measurements.
+
+---
+
+## Figure 5. Kinematic Analysis
+
+<p align="center">
+<img src="Figures/kinematic_analysis.pdf" width="850">
+</p>
+
+Tangential velocity distribution and Galactic population classification derived from proper motions and distances.
+
+---
+
+## Figure 6. Mass versus Orbital Semi-major Axis
+
+<p align="center">
+<img src="Figures/mass_semimajor.pdf" width="850">
+</p>
+
+Distribution of brown dwarf companion masses as a function of orbital semi-major axis, illustrating the brown dwarf desert and different orbital regimes.
+
+---
+
+## Scientific Applications
+
+The catalog supports numerous research applications, including
+
+- Literature-based brown dwarf catalog construction
+- Evolution of spectral classifications
+- Comparison of independent physical measurements
+- Population statistics
+- Brown dwarf cooling studies
+- Galactic kinematics
+- Companion demographics
+- Evidence tracing across publications
+- AI-assisted astronomical literature mining
+
+Because every measurement retains its original publication information, users can directly compare independent studies without losing provenance.
+
+---
 
 ---
 
 # Data Availability
 
-The complete brown dwarf catalog generated in this work is included in this repository as
+The literature-centric brown dwarf catalog generated in this work is publicly available with this repository.
 
-```
-brown_dwarf.csv
-```
+## Included Data
 
-The catalog contains
+| File | Description |
+|------|-------------|
+| `brown_dwarf.csv` | Complete extracted brown dwarf catalog |
+| `validate_brown_dwarf.json` | Filtered arXiv paper list |
+| `valid_experiments/dataset.xlsx` | Benchmark annotation dataset |
+| `valid_experiments/valid_set.json` | Validation benchmark |
+| `valid_experiments/test_set.json` | Test benchmark |
 
-- **21,989** unique brown dwarfs
-- **49,546** literature measurement records
+---
 
-Each record preserves the original literature provenance, including the corresponding publication, page number, and extracted text.
+## Catalog Characteristics
 
-Large datasets and future releases will also be archived through Zenodo.
+The catalog differs from conventional astronomical catalogs in that **each row corresponds to one literature measurement rather than one merged object**.
 
-## Zenodo
+For every extracted record, the catalog preserves
 
-```
-https://zenodo.org/record/XXXXXXX
-```
+- object identifier
+- physical parameters
+- uncertainty information
+- source publication
+- DOI (when available)
+- page number
+- text location
+- original literature expression
 
-## DOI
+This design enables complete provenance tracking and facilitates evidence-based astronomical research.
 
-```
-10.5281/zenodo.XXXXXXX
-```
+---
+
+## Reproducibility
+
+All experiments presented in the paper can be reproduced using the materials provided in this repository.
+
+The repository includes
+
+- complete extraction prompts
+- benchmark datasets
+- evaluation scripts
+- analysis scripts
+- visualization scripts
+- generated catalog
+
+No proprietary software is required beyond access to the corresponding LLM APIs.
 
 ---
 
 # Citation
 
-If you use this repository, the extracted catalog, or any part of the code in your research, please cite the accompanying paper.
+If you find this repository useful in your research, please cite our paper.
 
 ```bibtex
 @article{peng2026automatic,
@@ -712,7 +831,19 @@ If you use this repository, the extracted catalog, or any part of the code in yo
 }
 ```
 
-If you use the released catalog, please also cite the corresponding Zenodo dataset after publication.
+If you use the extracted catalog, benchmark dataset, or analysis scripts, please cite both this paper and the corresponding data release.
+
+---
+
+## Related Resources
+
+- arXiv paper *(coming soon)*
+- Zenodo dataset *(coming soon)*
+- Project homepage *(coming soon)*
+
+These links will be updated after publication.
+
+---
 
 ---
 
@@ -720,13 +851,7 @@ If you use the released catalog, please also cite the corresponding Zenodo datas
 
 This project is released under the **MIT License**.
 
-See
-
-```
-LICENSE
-```
-
-for the complete license text.
+See the [LICENSE](LICENSE) file for the complete license text.
 
 ---
 
@@ -740,66 +865,65 @@ This work was supported in part by
 - **National Natural Science Foundation of China**
   (Grant No. **62562052**)
 
-We gratefully acknowledge the developers of the open-source software and Large Language Models used throughout this work, as well as the arXiv platform for providing open access to the scientific literature.
+We sincerely thank the developers and maintainers of the following open-source projects:
+
+- arXiv
+- NASA ADS
+- Astropy
+- pandas
+- NumPy
+- SciPy
+- Matplotlib
+- LangChain
+- OpenAI API
+- DeepSeek API
+
+Their contributions made this work possible.
+
+---
+
+# Contributing
+
+Contributions are welcome.
+
+If you find bugs, have suggestions, or would like to improve the project, please
+
+- Open an Issue
+- Submit a Pull Request
+- Start a Discussion
+
+Please ensure that any submitted code follows the existing coding style and includes appropriate documentation.
 
 ---
 
 # Contact
 
-For questions, bug reports, or suggestions, please open an issue on GitHub.
-
-Alternatively, contact the corresponding authors.
+For questions regarding the paper, the catalog, or the source code, please contact the corresponding authors.
 
 **Yi-Cheng Rui**
 
-Email:
-
-```
-your_email@example.com
-```
+Email: `your_email@example.com`
 
 **Zheng-Jun Du**
 
-Email:
+Email: `dzj@qhu.edu.cn`
 
-```
-dzj@qhu.edu.cn
-```
-
----
-
-# Project Status
-
-✅ Active
-
-The repository will continue to be updated with
-
-- improved extraction prompts,
-- additional benchmark datasets,
-- new LLM backends,
-- expanded celestial catalogs,
-- and future releases accompanying subsequent publications.
-
----
-
-# Roadmap
-
-Future planned developments include
-
-- [ ] Support for exoplanet extraction
-- [ ] Support for stellar catalogs
-- [ ] Support for galaxy catalogs
-- [ ] Automatic catalog versioning
-- [ ] Cross-matching with SIMBAD and Gaia
-- [ ] Web-based catalog browser
-- [ ] Interactive visualization dashboard
+You are also welcome to open a GitHub Issue for technical questions or bug reports.
 
 ---
 
 # Star History
 
-If you find this repository useful, please consider giving it a ⭐ on GitHub.
+If you find this project helpful, please consider giving it a ⭐ on GitHub.
 
 It helps increase the visibility of the project and supports future development.
 
 ---
+
+<p align="center">
+
+**Automatic Celestial Catalog Extraction Using Large Language Models**
+
+*Literature-centric astronomical catalogs powered by Large Language Models.*
+
+</p>
