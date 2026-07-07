@@ -1,4 +1,4 @@
-﻿Name,Type,RA,Dec,Redshift,Brightness,Band,Solar Mass,Solar Radius,Semi-Major Axis,Orbital Period,Eccentricity,Inclination,Angular distance,ω,T Period,Primary transit,Impact Parameter b,Velocity Semiamplitude K,Calculated temperature,IsDiscoveryTarget,IsCelestial,Reason,source_file,source_chunk,source_pages
+﻿Name,Type,RA,Dec,Redshift,Brightness,Band,Solar Mass,Solar Radius,Semi-Major Axis,Orbital Period,Eccentricity,Inclination,Angular distance,ω,T Period,Primary transit,Impact Parameter b,Velocity Semiamplitude K,Calculated temperature,IsDiscoveryTarget,IsCelestial,Reason,paper_id,source_chunk,source_pages
 HIP 54515,Star,,,,,,,,,,,,,,,,,,,0,1,Host star mentioned in title and abstract as an A5 star with a superjovian planet,2512_02159,1,1-1
 HIP 54515 b,Superjovian Planet,,,,log(L/L⊙) ∼-3.52 ± 0.03,1.65 µm,17.7+7.6−4.9 MJup,,∼25 au,,≈0.4,,0.′′145–0.′′192,,,,,,,1,1,"Superjovian planet discovered in this paper around HIP 54515, detected by SCExAO/CHARIS and Gaia astrometry, mentioned in title and abstract",2512_02159,1,1-1
 KMT-2022-BLG-1818Lb,Super-Jupiter,,,,,,,,,,,,,,,,,,,1,1,Mentioned in the title as a cold super-Jupiter planet discovery,2505_05093,1,1-1
