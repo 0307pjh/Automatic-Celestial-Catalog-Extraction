@@ -27,6 +27,14 @@ Jun-Hao Peng, Yi-Cheng Rui, Peng-Ju Wang, Wen-Yong Kang, Yu-Long Gao, Zheng-Jun 
 
 # Overview
 
+## Pipeline
+
+<p align="center">
+  <img src="Figures/Pipeline.png" width="900">
+</p>
+
+Overview of the automated literature-mining pipeline.
+
 This repository contains the official implementation and experimental results for an automated literature-mining pipeline that constructs structured celestial catalogs directly from astrophysical papers using Large Language Models (LLMs).
 
 Unlike traditional rule-based information extraction systems, our framework performs semantic understanding of full-text scientific papers and automatically extracts celestial objects together with their reported physical parameters while preserving literature provenance.
