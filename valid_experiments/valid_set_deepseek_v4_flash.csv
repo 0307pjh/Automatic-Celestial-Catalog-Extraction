@@ -1,4 +1,4 @@
-﻿Name,Type,RA,Dec,Redshift,Brightness,Band,Solar Mass,Solar Radius,Semi-Major Axis,Orbital Period,Eccentricity,Inclination,Angular distance,ω,T Period,Primary transit,Impact Parameter b,Velocity Semiamplitude K,Calculated temperature,IsDiscoveryTarget,IsCelestial,Reason,source_file,source_chunk,source_pages
+﻿Name,Type,RA,Dec,Redshift,Brightness,Band,Solar Mass,Solar Radius,Semi-Major Axis,Orbital Period,Eccentricity,Inclination,Angular distance,ω,T Period,Primary transit,Impact Parameter b,Velocity Semiamplitude K,Calculated temperature,IsDiscoveryTarget,IsCelestial,Reason,paper_id,source_chunk,source_pages
 KMT-2025-BLG-1616Lb,planet,,,,,,,,,,,,,,,,,,,1,1,mentioned in title as planet discovered,2601_11469,1,1-1
 LHS 1903,Star,,,,,,,,,,,,,,,,,,,0,1,Found in title as red dwarf LHS 1903 and mentioned in the first line,2602_11271,1,1-1
 KMT-2022-BLG-1818L,star,,,,,,,,,,,,,,,,,,,0,1,inferred from title as host star of planets b and c,2505_05093,1,1-1
