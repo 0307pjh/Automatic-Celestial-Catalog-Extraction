@@ -70,7 +70,7 @@ plt.rcParams.update({
 })
 
 # ========== Read data ==========
-df = pd.read_csv('brown_dwarf2.csv', low_memory=False)
+df = pd.read_csv('brown_dwarf.csv', low_memory=False)
 print(f"Original data: {len(df):,} rows")
 
 # Keep only brown dwarfs
