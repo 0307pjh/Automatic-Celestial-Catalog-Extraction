@@ -1,12 +1,19 @@
 # Automatic Celestial Catalog Extraction Using Large Language Models
 
 <p align="center">
+  <img src="Figures/Pipeline.png" width="900">
+</p>
 
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg)]()
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
-[![arXiv](https://img.shields.io/badge/arXiv-XXXX.XXXXX-B31B1B.svg)]()
+<p align="center">
+
+[![Paper](https://img.shields.io/badge/Paper-arXiv-red)](...)
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](...)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](...)
+[![ApJ](https://img.shields.io/badge/Journal-ApJ-orange)](...)
+[![Dataset](https://img.shields.io/badge/Dataset-Zenodo-blue)](...)
 
 </p>
+
 
 Official implementation of the paper
 
