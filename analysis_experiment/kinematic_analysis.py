@@ -85,7 +85,7 @@ print("="*70)
 print("Loading data")
 print("="*70)
 
-df = pd.read_csv('brown_dwarf2.csv', low_memory=False)
+df = pd.read_csv('brown_dwarf.csv', low_memory=False)
 print(f"Original data: {len(df):,} rows")
 
 # Keep only brown dwarfs
