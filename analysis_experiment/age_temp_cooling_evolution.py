@@ -42,7 +42,7 @@ print("="*70)
 print("Data loading and cleaning")
 print("="*70)
 
-df = pd.read_csv('brown_dwarf2.csv', low_memory=False)
+df = pd.read_csv('brown_dwarf.csv', low_memory=False)
 print(f"Original rows: {len(df):,}")
 
 # Value extraction function
