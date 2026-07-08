@@ -69,8 +69,8 @@ The complete workflow consists of two major stages:
 | Papers processed | **1,410** |
 | Unique brown dwarfs | **17,793** |
 | Measurement records | **41064** |
-| Processing time | **~25 minutes** |
-| Total API cost | **$14.83** |
+| Processing time | **~40 minutes** |
+| Total API cost | **$22.36** |
 | Selected model | **DeepSeek-V4-Flash** |
 | Best F1 score | **94.67%** |
 
