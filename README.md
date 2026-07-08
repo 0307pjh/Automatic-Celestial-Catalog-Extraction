@@ -1,10 +1,6 @@
 # Automatic Celestial Catalog Extraction Using Large Language Models
 
 <p align="center">
-  <img src="Figures/Pipeline.png" width="900">
-</p>
-
-<p align="center">
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv-red)](...)
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](...)
