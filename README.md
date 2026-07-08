@@ -5,9 +5,10 @@
 [![Paper](https://img.shields.io/badge/Paper-arXiv-red)](...)
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](...)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](...)
+/*
 [![ApJ](https://img.shields.io/badge/Journal-ApJ-orange)](...)
 [![Dataset](https://img.shields.io/badge/Dataset-Zenodo-blue)](...)
-
+*/
 </p>
 
 
