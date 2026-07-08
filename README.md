@@ -59,8 +59,6 @@ The complete workflow consists of two major stages:
 - Parallel PDF processing
 - Multi-model LLM benchmark
 - Reproducible scientific analysis
-- Publication-quality figures
-- Brown dwarf catalog containing **21,989** unique objects
 
 ---
 
@@ -117,6 +115,7 @@ The complete workflow consists of two major stages:
 ├── requirements.txt                         # Python dependencies
 ├── validate_brown_dwarf.json                # Filtered paper list
 └── README.md
+
 ```
 
 ---
@@ -152,7 +151,6 @@ Main modules include
 - document chunking
 - LLM inference
 - result aggregation
-- duplicate removal
 - catalog generation
 
 ---
@@ -187,7 +185,7 @@ All figures can be reproduced directly from the released catalog.
 
 The released catalog contains
 
-- **21,989** unique brown dwarfs
+- **21,989** unique brown dwarfs (deduplicated by Name field)
 - **49,546** literature measurement records
 
 Each record preserves the original publication provenance, enabling literature-level analyses instead of only object-level summaries.
