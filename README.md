@@ -881,11 +881,14 @@ Please ensure that any submitted code follows the existing coding style and incl
 
 # Contact
 
-For questions regarding the paper, the catalog, or the source code, please contact the corresponding authors.
+For questions regarding the paper, the catalog, or the source code, please contact the authors or corresponding authors.
+
+**Jun-Hao Peng**
+Email: `ys250854100535@qhu.edu.cn`
 
 **Yi-Cheng Rui**
 
-Email: `your_email@example.com`
+Email: `ruiyicheng@sjtu.edu.cn`
 
 **Zheng-Jun Du**
 
