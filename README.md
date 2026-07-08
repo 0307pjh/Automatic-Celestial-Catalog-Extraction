@@ -67,8 +67,8 @@ The complete workflow consists of two major stages:
 | Metric | Result |
 |---------|--------|
 | Papers processed | **1,410** |
-| Unique brown dwarfs | **21,989** |
-| Measurement records | **49,546** |
+| Unique brown dwarfs | **17,793** |
+| Measurement records | **41064** |
 | Processing time | **~25 minutes** |
 | Total API cost | **$14.83** |
 | Selected model | **DeepSeek-V4-Flash** |
@@ -185,8 +185,8 @@ All figures can be reproduced directly from the released catalog.
 
 The released catalog contains
 
-- **21,989** unique brown dwarfs (deduplicated by Name field)
-- **49,546** literature measurement records
+- **17,793** unique brown dwarfs (deduplicated by Name field)
+- **41064** literature measurement records
 
 Each record preserves the original publication provenance, enabling literature-level analyses instead of only object-level summaries.
 
@@ -197,27 +197,31 @@ Each record preserves the original publication provenance, enabling literature-l
 
 ### Requirements
 
-The pipeline has been tested under the following environment.
+The pipeline has been tested with the following software environment.
 
 | Package | Version |
 |----------|---------|
 | Python | 3.11+ |
-| pandas | Latest |
-| numpy | Latest |
-| scipy | Latest |
-| matplotlib | Latest |
-| requests | Latest |
-| PyMuPDF | Latest |
-| pdfplumber | Latest |
-| langchain | Latest |
-| openai | Latest |
+| OpenAI Python SDK | 1.95.0 |
+| LangChain | 1.0+ |
+| pandas | 2.3.1 |
+| NumPy | 1.26.4 |
+| SciPy | 1.16.1 |
+| Matplotlib | 3.10.6 |
+| PyMuPDF | 1.26.7 |
+
+All additional dependencies can be installed via
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/Automatic-Celestial-Catalog-Extraction.git
+git clone https://github.com/0307pjh/Automatic-Celestial-Catalog-Extraction.git
 
 cd Automatic-Celestial-Catalog-Extraction
 ```
@@ -321,18 +325,13 @@ Representative fields include
 | Mass_MJ | Mass |
 | Radius_RJ | Radius |
 | EffectiveTemperature_K | Effective temperature |
-| LogG | Surface gravity |
 | Distance_pc | Distance |
 | ProperMotion_RA_mas_yr | Proper motion (RA) |
 | ProperMotion_Dec_mas_yr | Proper motion (Dec) |
-| RadialVelocity_km_s | Radial velocity |
 | Age_Gyr | Age |
-| Metallicity | Metallicity |
-| PaperID | arXiv identifier |
-| DOI | Paper DOI |
-| Page | Source page |
-| Text | Original extracted paragraph |
-
+| SemiMajorAxis_AU | Semi-major axis |
+| paper_id | arXiv identifier |
+| source_pages | Source pages |
 The catalog preserves the original values reported in the literature whenever possible instead of replacing them with normalized or merged measurements.
 
 ---
@@ -399,7 +398,6 @@ The pipeline automatically performs
 - PDF chunking
 - parallel LLM inference
 - structured information extraction
-- duplicate checking
 - CSV generation
 
 The final catalog is exported as
@@ -438,45 +436,12 @@ Specify the number of workers.
 
 ```bash
 python extraction_chain_stream_parallel.py \
-    --max-workers 30 \
-    --chunk-workers 20
+    --max-workers 50 \
+    --chunk-workers 25
 ```
 
 Increasing the number of workers generally improves throughput but also increases API concurrency.
 
----
-
-## Pipeline Workflow
-
-```
-arXiv Metadata
-      │
-      ▼
-Paper Filtering
-      │
-      ▼
-Download PDFs
-      │
-      ▼
-PDF Chunking
-      │
-      ▼
-Parallel LLM Extraction
-      │
-      ▼
-Structured JSON
-      │
-      ▼
-Duplicate Checking
-      │
-      ▼
-CSV Catalog
-      │
-      ▼
-Scientific Analysis
-```
-
----
 
 ## Benchmark Evaluation
 
@@ -599,8 +564,7 @@ Among all evaluated models, **DeepSeek-V4-Flash** provides the best overall trad
 
 - extraction accuracy,
 - inference efficiency,
-- deployment cost, and
-- scalability.
+- deployment cost
 
 Consequently, it was selected as the default model for constructing the complete brown dwarf catalog presented in this work.
 
@@ -657,10 +621,10 @@ The benchmark demonstrates that extraction quality is not solely determined by m
 Using **DeepSeek-V4-Flash**, the complete pipeline processed
 
 - **1,410** astrophysical papers,
-- **21,989** unique brown dwarfs,
-- **49,546** literature measurement records,
+- **17,793** unique brown dwarfs,
+- **41064** literature measurement records,
 
-within approximately **25 minutes** at a total API cost of **$14.83**, demonstrating the practicality of LLM-based astronomical catalog construction for large-scale literature mining.
+within approximately **40 minutes** at a total API cost of **$22.36**, demonstrating the practicality of LLM-based astronomical catalog construction for large-scale literature mining.
 
 ---
 
@@ -677,8 +641,8 @@ The current release contains
 | Property | Value |
 |----------|------:|
 | Processed papers | 1,410 |
-| Unique brown dwarfs | 21,989 |
-| Literature records | 49,546 |
+| Unique brown dwarfs | 17,793 |
+| Literature records | 41064 |
 | Objects with spectral classifications | 11,884 |
 | Objects appearing in multiple papers | 2,413 |
 | Objects with multiple spectral classifications | 1,735 |
@@ -819,6 +783,28 @@ No proprietary software is required beyond access to the corresponding LLM APIs.
 
 ---
 
+---
+
+# Future Outlook
+
+We are actively extending this project beyond literature-based catalog construction toward AI-assisted astronomical knowledge discovery.
+
+Current directions include:
+
+- **Natural-language Catalog Agent.**  
+  We have developed an initial intelligent agent that enables users to query the literature-centric brown dwarf catalog using natural language. The system is currently undergoing security review and usability evaluation before public release.
+
+- **Literature Knowledge Base.**  
+  We are constructing a knowledge base by encoding astrophysical literature into structured representations. This effort aims to expand the capabilities of the intelligent agent beyond catalog retrieval, enabling evidence tracing, scientific reasoning, and knowledge-aware question answering over the astronomical literature.
+
+- **Expanded Celestial Catalogs.**  
+  Although this work focuses on brown dwarfs, the proposed framework is designed to be generalizable. Future releases will extend the extraction pipeline to additional classes of celestial objects, including exoplanets, stars, galaxies, and other astrophysical sources.
+
+- **Continuous Catalog Updates.**  
+  We plan to periodically synchronize newly submitted arXiv papers and update the catalog automatically, allowing the database to evolve together with the astronomical literature.
+
+---
+
 # Citation
 
 If you find this repository useful in your research, please cite our paper.
@@ -827,7 +813,7 @@ If you find this repository useful in your research, please cite our paper.
 @article{peng2026automatic,
   title={Automatic Celestial Catalog Extraction Using Large Language Models},
   author={Peng, Jun-Hao and Rui, Yi-Cheng and Wang, Peng-Ju and Kang, Wen-Yong and Gao, Yu-Long and Du, Zheng-Jun},
-  journal={The Astrophysical Journal},
+  journal={},
   year={2026}
 }
 ```
