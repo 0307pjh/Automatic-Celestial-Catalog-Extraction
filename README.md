@@ -654,7 +654,7 @@ Unlike conventional catalogs, every record preserves its original literature pro
 ## Figure 1. arXiv Paper Statistics
 
 <p align="center">
-<img src="Figures/arxiv_astrophysics_yearly.pdf" width="700">
+<img src="Figures/arxiv_astrophysics_yearly.png" width="700">
 </p>
 
 Annual statistics of astrophysics papers collected from the arXiv repository and the subset selected for brown dwarf catalog construction.
@@ -664,7 +664,7 @@ Annual statistics of astrophysics papers collected from the arXiv repository and
 ## Figure 2. Extraction Pipeline
 
 <p align="center">
-<img src="Figures/Pipeline.pdf" width="850">
+<img src="Figures/Pipeline.png" width="850">
 </p>
 
 Overview of the automated extraction framework, including paper filtering, PDF processing, LLM-based information extraction, and catalog generation.
@@ -674,7 +674,7 @@ Overview of the automated extraction framework, including paper filtering, PDF p
 ## Figure 3. Catalog Summary
 
 <p align="center">
-<img src="Figures/catalog_summary.pdf" width="850">
+<img src="Figures/catalog_summary.png" width="850">
 </p>
 
 Statistical distributions of the physical parameters preserved in the literature-centric catalog.
@@ -684,7 +684,7 @@ Statistical distributions of the physical parameters preserved in the literature
 ## Figure 4. Brown Dwarf Cooling Evolution
 
 <p align="center">
-<img src="Figures/age_temp_cooling_evolution.pdf" width="850">
+<img src="Figures/age_temp_cooling_evolution.png" width="850">
 </p>
 
 Relationships among effective temperature, age, and mass for brown dwarfs with complete evolutionary measurements.
@@ -694,7 +694,7 @@ Relationships among effective temperature, age, and mass for brown dwarfs with c
 ## Figure 5. Kinematic Analysis
 
 <p align="center">
-<img src="Figures/kinematic_analysis.pdf" width="850">
+<img src="Figures/kinematic_analysis.png" width="850">
 </p>
 
 Tangential velocity distribution and Galactic population classification derived from proper motions and distances.
@@ -704,7 +704,7 @@ Tangential velocity distribution and Galactic population classification derived 
 ## Figure 6. Mass versus Orbital Semi-major Axis
 
 <p align="center">
-<img src="Figures/mass_semimajor.pdf" width="850">
+<img src="Figures/mass_semimajor.png" width="850">
 </p>
 
 Distribution of brown dwarf companion masses as a function of orbital semi-major axis, illustrating the brown dwarf desert and different orbital regimes.
