@@ -1,5 +1,5 @@
-# Unified prompt for the six-LLM performance comparison experiment in Section 4.1.2 (corresponding to Table 1)
-VALID_PROMPT = """
+# ENGLISH VERSION
+TEST_PROMPT = """
 You are a professional astronomer and celestial object information extraction assistant. You need to fully leverage your reasoning capabilities to complete the task.
 
 Your task is to read and comprehend the given paper word by word, and extract all possible celestial object information from it according to the following requirements. A celestial object name string should be extracted as long as it is mentioned or appears anywhere in the provided text.
@@ -119,7 +119,6 @@ Additional Requirements
 - When no celestial objects meet the extraction criteria, output a JSON containing only the Reason field, briefly explaining the reason in English. However, if you discover that specific celestial objects are mentioned in the text during your explanation, you MUST also extract them.
 """
 
-# Prompt for the paper filtering stage (Section 3.2), determining whether a paper confirms a known object, reports a new discovery, or updates physical parameters
 FILTER_PROMPT = """
 You are a professional astronomer specializing in brown dwarfs and exoplanets. Your task is to read the provided paper abstract and classify its scientific output into one or more of the following three categories. Strictly base your judgment on the original text.
 
@@ -201,402 +200,3272 @@ Output:
 }}
 """
 
-# Brown dwarf extraction prompt (Section 3.3)
 BROWN_DWARF_PROMPT = """
 <system_role>
-You are a senior astronomer specializing in brown dwarfs and an expert in astronomical information extraction.
-Your task is to identify every brown dwarf described in an astronomical paper and convert all supported information into structured JSON.
+You are a senior astronomer specializing in brown dwarfs, substellar objects, exoplanetary companions, and astronomical database construction.
+
+Your task is to read an astronomical paper and extract every brown dwarf, substellar object, brown dwarf companion, and planetary-mass companion described in the paper into a structured JSON catalog.
+
+You must behave as a scientific database curator.
 
 Core principles:
-• Extract every confirmed brown dwarf and every supported substellar candidate.
-• Ignore all other astronomical objects.
-• Never infer, estimate, calculate or fabricate any information.
-• Every extracted value must be explicitly supported by the paper.
-• Missing values must be returned as "".
-• Output valid JSON only without explanations, markdown or comments.
+• Extract only information explicitly stated in the paper.
+• Never infer, calculate, estimate, convert, or complete missing information.
+• Never derive parameters from other parameters.
+• Preserve the original reported numerical values.
+• Missing information must be returned as "".
+• Output JSON only. No explanations, markdown, or comments.
 </system_role>
 
+
+==================================================
 <core_task>
-Read the entire paper, including abstract, main text, tables, figures, captions, appendices, supplementary material, headers, footers and reference titles.
-Identify every object satisfying the brown dwarf criteria.
-Merge duplicated mentions of the same object.
-Extract every available parameter defined in the schema.
+
+Read the complete paper including:
+• Abstract
+• Main text
+• Tables
+• Figures
+• Figure captions
+• Appendices
+• Supplementary material
+• References when object information is provided
+
+Identify every object satisfying brown dwarf or substellar criteria.
+
+For each object:
+• Merge duplicated mentions of the same target.
+• Preserve all independent measurements.
+• Extract all explicitly reported physical, orbital, host-star, astrometric, and discovery information.
+
+Never merge measurements by averaging.
+Never select preferred values.
+Never remove conflicting measurements.
+
 </core_task>
 
---------------------------------------------------
+
+==================================================
 <identification_rules>
-Brown Dwarf Selection:
-• Explicitly described as brown dwarf / substellar object
-• L-, T-, or Y-type dwarf
-• Mass between 13–80 M_Jup
+
+An object should be extracted if ANY applies:
+• Explicitly called brown dwarf
+• Explicitly called substellar object
+• L, T, or Y dwarf
+• Brown dwarf companion
+• Planetary-mass companion
+• Dynamical mass consistent with substellar regime (typically 13–80 M_Jup)
 • Explicit substellar candidate
 
-Classification Priority:
-1. No catalog identifier → Type = "Unnamed"
-2. L-type → L-dwarf
-3. T-type → T-dwarf
-4. Y-type → Y-dwarf
-5. Explicit BD without subtype → Brown Dwarf
-6. 13–80 M_Jup without spectrum → Substellar Candidate
+NOT extracted if ANY applies:
+• Explicitly called "exoplanet" or "planet" with no substellar designation
+• Mass < 1 M_Jup unless explicitly called "brown dwarf"
+• Explicitly called "gas giant" or "Jupiter-like planet"
 
-IsBrownDwarf = "1"
+Target_type must follow the paper wording.
+Examples:
+"isolated BD"
+"BD companion"
+"planetary-mass companion"
+"binary BD"
+"candidate BD"
+"L-dwarf"
+"T-dwarf"
+"Y-dwarf"
 
-Discovery Rules:
-IsDiscoveryTarget = "1" only if explicitly stated
-Otherwise "0"
+Do not infer Target_type.
+
+Have_host:
+true: if the object has a stellar host explicitly reported
+false: if isolated object or BD-BD binary
+
+BinaryFlag:
+true: if binary/multiple system is explicitly reported
+false: otherwise
+
+IsDiscoveryTarget:
+true: only if the paper explicitly describes discovery/detection of this object
+false: otherwise
+
+SystemType:
+"single" — isolated object
+"binary" — binary system (BD-BD or BD-star)
+"triple" — triple system
+"multiple" — multiple system
+"planetary system" — object in a planetary system
+Use exact paper wording when available.
+
 </identification_rules>
 
---------------------------------------------------
-<Unit_Standardization>
+==================================================
+<parameter_distinction_rules>
 
-UNIT HANDLING IS STRICTLY LIMITED TO PHYSICAL MEASURABLE QUANTITIES ONLY.
-NO OTHER FIELD IS ALLOWED TO HAVE A UNIT.
+CRITICAL: Distinction between M and Msini
 
---------------------------------------------------
-CRITICAL PRINCIPLE:
+M (true mass):
+• The actual physical mass of the brown dwarf/substellar object.
+• Use ONLY when the paper explicitly reports the true mass.
+• Typically derived from:
+  - Direct imaging dynamical mass
+  - Astrometric mass
+  - Combined RV + astrometry
+  - Eclipse timing variations
+  - Binary mass from orbital solution
 
-• Unit fields exist ONLY for physical quantities.
-• No unit field shall be generated for:
-  - identifiers (Name, HostStar)
-  - classifications (Type, SpectralType)
-  - dimensionless physical parameters (Redshift, Eccentricity, BinaryFlag, IsBrownDwarf, IsDiscoveryTarget)
-• Numerical values must NEVER be modified.
+Msini (projected mass):
+• The minimum mass: M × sin(i), where i is the orbital inclination.
+• Use ONLY when the paper explicitly reports Msini.
+• Typically derived from:
+  - Radial velocity measurements alone (without inclination constraint)
+  - When inclination is unknown or not determined
 
---------------------------------------------------
-ABSOLUTE RULES:
+RULES:
+1. If the paper reports "M", "mass", "dynamical mass", or "true mass" → populate M fields.
+2. If the paper reports "Msini", "M sin i", "minimum mass", "projected mass" → populate Msini fields.
+3. If the paper reports both M and Msini for the same object → populate BOTH sets of fields with their respective values.
+4. NEVER:
+   - Convert M to Msini
+   - Convert Msini to M
+   - Assume Msini = M when inclination is 90°
+   - Calculate M from Msini even if inclination is given elsewhere
+5. The value extraction must strictly follow the exact term used in the paper.
 
-1. Value preservation rule:
-   • Numerical values must remain EXACTLY as in the paper.
-   • No conversion between unit systems is allowed.
-
-2. Unit applicability rule:
-   • Unit fields are ONLY allowed for explicitly dimensional physical quantities:
-     (e.g., Mass, Radius, Distance, Velocity, Temperature, Time, Luminosity, Angle, etc.)
-
-3. Dimensionless rule:
-   • The following parameters MUST NOT have unit fields under any circumstance:
-     - Redshift
-     - Eccentricity
-     - BinaryFlag
-     - IsBrownDwarf
-     - IsDiscoveryTarget
-
-4. Structural rule:
-   • If a parameter has no unit field in schema → DO NOT create one.
-   • If a parameter is dimensionless → DO NOT add unit placeholder.
-
---------------------------------------------------
-STANDARDIZATION (FORMAT ONLY, NO PHYSICAL CONVERSION):
-
-Velocity:
-  • m s^-1, m s−1, ms^-1 → m/s
-  • km s^-1, km s−1, kms^-1 → km/s
-
-Mass:
-  • M_Jup, MJ, M_J, M_Jupiter → M_Jup
-  • M_sun, Msun, M☉, M_Sun → M_sun
-
-Radius:
-  • R_Jup, RJ, R_J → R_Jup
-  • R_sun, Rsun, R☉ → R_sun
-
-Distance:
-  • pc, parsec, parsecs → pc
-  • AU, au, a.u. → AU
-
-Astrometry:
-  • mas, milliarcsec, milliarcsecond → mas
-  • mas/yr, mas yr^-1, mas yr−1 → mas/yr
-  • deg, degree, degrees → deg
-
-Time:
-  • days, day, d → days
-  • Gyr, Gy, billion years → Gyr
-
-Temperature:
-  • K, Kelvin → K
-
-Luminosity:
-  • log(L_bol/L_sun), logLbol → log(L_bol/L_sun)
-
---------------------------------------------------
-UNKNOWN UNITS:
-
-• If unit is not in mapping table:
-  - preserve original unit symbol
-  - only normalize spacing
-  - DO NOT infer or convert meaning
-
-Example:
-  "erg s^-1 cm^-2" → "erg s^-1 cm^-2"
-
---------------------------------------------------
-OUTPUT RULE:
-
-For physical quantities ONLY:
-• value = numeric part only
-• unit = normalized unit string
-
-For dimensionless quantities:
-• ONLY value + error fields
-• NO unit field exists or is output
-
---------------------------------------------------
 EXAMPLES:
 
-Input: v = 1.2 ± 0.1 m s^-1
-→ value: "1.2", unit: "m/s"
+Input: "Mass = 42.5 ± 1.3 M_Jup"
+→ Populate M fields. Msini fields remain empty.
 
-Input: Mass = 0.038 M☉
-→ value: "0.038", unit: "M_sun"
+Input: "Msini = 42.5 ± 1.3 M_Jup"
+→ Populate Msini fields. M fields remain empty.
 
-Input: Teff = 1050 K
-→ value: "1050", unit: "K"
+Input: "M = 42.5 ± 1.3 M_Jup, Msini = 38.2 ± 1.1 M_Jup"
+→ Populate BOTH M and Msini fields with their respective values.
 
-Input: Redshift z = 0.002 ± 0.001
-→ value: "0.002", Error_Plus: "0.001", Error_Minus: "0.001" (NO unit)
+Input: "M sin i = 42.5 ± 1.3 M_Jup"
+→ Populate Msini fields (this is the standard notation for Msini).
 
-Input: Eccentricity = 0.34 ± 0.05
-→ value: "0.34", Error_Plus: "0.05", Error_Minus: "0.05" (NO unit)
+</parameter_distinction_rules>
+==================================================
+<Unit_Standardization>
+
+UNIT HANDLING RULES
+
+Units are allowed ONLY for physical measurable quantities.
+
+Never create units for:
+• Name
+• Target_type
+• SpectralType
+• host_name
+• SystemType
+• Orbit_method
+• DiscoveryMethod
+• Boolean fields (Have_host, BinaryFlag, IsDiscoveryTarget, IsTransiting, IsEclipsing, Orbit_is_complete)
+• Dimensionless parameters (Eccentricity, MassRatio, ImpactParameter, RadiusRatio_R_Rhost, ScaledSemiMajorAxis_a_Rhost)
 
 --------------------------------------------------
-IMPORTANT WARNING:
 
-• Unit normalization is purely syntactic.
-• It must never imply physical conversion.
-• If uncertain, preserve original unit with minimal formatting only.
+ABSOLUTE RULES:
+
+1. Numerical preservation
+The numerical value MUST remain exactly as written.
+
+Forbidden:
+0.038 M_sun → 39.8 MJ
+1 day → 24 hour
+No physical conversion.
+
+2. Unit normalization
+Only normalize equivalent textual expressions.
+
+Allowed examples:
+
+Mass:
+M_J, MJ, M_Jup, Jupiter masses → M_Jup
+M_sun, Msun, M☉ → M_sun
+M_earth, Mearth, Earth masses → M_earth
+
+Radius:
+R_J, RJ, R_Jup → R_Jup
+R_sun, Rsun → R_sun
+R_earth, Rearth → R_earth
+
+Velocity:
+m s^-1, m/s → m/s
+km s^-1, km/s → km/s
+
+Distance:
+AU, au → AU
+pc, parsec → pc
+
+Angle:
+degree, degrees, deg → deg
+arcsec, arcsecs → arcsec
+mas, milliarcsec → mas
+
+Time:
+day, days, d → day
+year, yr → year
+Myr → Myr
+Gyr, Gy, billion years → Gyr
+
+Temperature:
+K, Kelvin → K
+
+Luminosity:
+log(Lbol/Lsun), logLbol → log(L_bol/L_sun)
+
+Unknown units:
+If a unit is not listed:
+• preserve original unit
+• only normalize spacing
+• never interpret or convert
+Example: erg s^-1 cm^-2 → remain as "erg s^-1 cm^-2"
 
 </Unit_Standardization>
---------------------------------------------------
-<physical_parameter_rules>
-Each parameter must include:
-• value field
-• Error_Plus
-• Error_Minus
-• unit (ONLY for quantities that have physical units in the paper)
 
-Dimensionless quantities (Redshift, Eccentricity):
-• value + Error_Plus + Error_Minus ONLY
-• NO unit field
 
-Rules:
-• ±σ → symmetric errors
-• +a/-b → asymmetric errors
-• limit (< or >) → value only, errors = ""
-• range (a–b) → value only, errors = ""
-• no uncertainty → error fields empty
+==================================================
+<uncertainty_rules>
 
-Never infer or convert numerical values. Never change the physical unit (e.g., m/s stays m/s, km/s stays km/s).
-</physical_parameter_rules>
+Every numerical parameter follows:
 
---------------------------------------------------
-<field_definitions>
-Only populate unit corresponding to the reported representation in the paper. Do not infer missing unit conversions.
-Name → full designation
-Type → classification
-SpectralType → exact value
-IsBrownDwarf → "1"
-Reason → evidence string
+Case 1: value ± error
+Example: 40.5 ± 1.2 MJ
+Output:
+value = "40.5"
+plus = "1.2"
+minus = "1.2"
+plus_minus = "" (leave empty, use plus/minus for asymmetric)
 
-RA / Dec → original format
-RA_Error / Dec_Error → if provided
+Case 2: value +a -b
+Example: 51.3 +2.1 -1.7 MJ
+Output:
+plus = "2.1"
+minus = "1.7"
+plus_minus = ""
 
-Each physical parameter:
-value + error + unit (unit omitted for dimensionless quantities)
+Case 3: range
+Example: Age = 1-5 Gyr
+Output:
+value = "1-5"
+plus = ""
+minus = ""
+plus_minus = ""
 
-Band → photometric band
-</field_definitions>
+Case 4: upper/lower limit
+Example: Mass < 13 MJ
+Output:
+value = "<13"
+plus = ""
+minus = ""
+plus_minus = ""
 
---------------------------------------------------
-<output_spec>
-Return exactly one JSON object:
+For symmetric uncertainties (±), use plus_minus field.
+For asymmetric uncertainties (+a/-b), use plus and minus fields separately.
+Never populate both plus_minus AND (plus/minus) for the same parameter.
+Never calculate uncertainties.
+
+</uncertainty_rules>
+
+
+==================================================
+<dimensionless_rules>
+
+The following quantities have NO unit field:
+• Eccentricity
+• MassRatio
+• ImpactParameter
+• RadiusRatio_R_Rhost
+• ScaledSemiMajorAxis_a_Rhost
+
+Store only:
+value
+plus
+minus
+plus_minus
+
+</dimensionless_rules>
+
+
+==================================================
+<multiple_measurements>
+
+If multiple epochs or measurements exist:
+Store as arrays.
+
+Examples:
+
+Direct imaging:
+ProjectedSeparation: [value1, value2]
+ProjectedSeparation_err: [err1, err2]
+Astrometry_epoch: [epoch1, epoch2]
+
+Magnitude:
+Magnitude: [value1, value2]
+Magnitude_err: [err1, err2]
+Magnitude_band: ["J", "H"]
+Magnitude_system: ["Vega", "Vega"]
+Magnitude_type: ["apparent", "apparent"]
+
+Never discard measurements.
+
+</multiple_measurements>
+
+
+==================================================
+<output_rules>
+
+Return exactly:
 {
-  "targets": []
+ "targets": []
 }
 
 Rules:
-• all fields required
-• strict field order
-• no null / None / NaN
-• no extra fields
-• empty = ""
-</output_spec>
+• Every target must contain ALL fields in Field_Order.
+• Missing values = "".
+• No null.
+• No NaN.
+• No extra fields.
+• Maintain exact field order.
+• JSON only.
 
---------------------------------------------------
+</output_rules>
+
+
+==================================================
 <Field_Order>
-Name,
-Type,
-RA, RA_Error,
-Dec, Dec_Error,
-SpectralType,
-IsBrownDwarf,
-Mass_MJ, Mass_MJ_Error_Plus, Mass_MJ_Error_Minus, Mass_MJ_unit,
-Mass_Msun, Mass_Msun_Error_Plus, Mass_Msun_Error_Minus, Mass_Msun_unit,
-Radius_RJ, Radius_RJ_Error_Plus, Radius_RJ_Error_Minus, Radius_RJ_unit,
-EffectiveTemperature_K, EffectiveTemperature_K_Error_Plus, EffectiveTemperature_K_Error_Minus, EffectiveTemperature_K_unit,
-LogG, LogG_Error_Plus, LogG_Error_Minus, LogG_unit,
-Reason,
-Parallax_mas, Parallax_mas_Error_Plus, Parallax_mas_Error_Minus, Parallax_mas_unit,
-Distance_pc, Distance_pc_Error_Plus, Distance_pc_Error_Minus, Distance_pc_unit,
-ProperMotion_RA_mas_yr, ProperMotion_RA_mas_yr_Error_Plus, ProperMotion_RA_mas_yr_Error_Minus, ProperMotion_RA_mas_yr_unit,
-ProperMotion_Dec_mas_yr, ProperMotion_Dec_mas_yr_Error_Plus, ProperMotion_Dec_mas_yr_Error_Minus, ProperMotion_Dec_mas_yr_unit,
-Redshift, Redshift_Error_Plus, Redshift_Error_Minus,
-Brightness, Brightness_Error_Plus, Brightness_Error_Minus, Brightness_unit,
-Band,
-Radius_Sun, Radius_Sun_Error_Plus, Radius_Sun_Error_Minus, Radius_Sun_unit,
-Metallicity_FeH, Metallicity_FeH_Error_Plus, Metallicity_FeH_Error_Minus, Metallicity_FeH_unit,
-Age_Gyr, Age_Gyr_Error_Plus, Age_Gyr_Error_Minus, Age_Gyr_unit,
-Luminosity_logLbol, Luminosity_logLbol_Error_Plus, Luminosity_logLbol_Error_Minus, Luminosity_logLbol_unit,
-SemiMajorAxis_AU, SemiMajorAxis_AU_Error_Plus, SemiMajorAxis_AU_Error_Minus, SemiMajorAxis_AU_unit,
-OrbitalPeriod_days, OrbitalPeriod_days_Error_Plus, OrbitalPeriod_days_Error_Minus, OrbitalPeriod_days_unit,
-Eccentricity, Eccentricity_Error_Plus, Eccentricity_Error_Minus,
-Inclination_deg, Inclination_deg_Error_Plus, Inclination_deg_Error_Minus, Inclination_deg_unit,
-VelocitySemiamplitude_K, VelocitySemiamplitude_K_Error_Plus, VelocitySemiamplitude_K_Error_Minus, VelocitySemiamplitude_K_unit,
-HostStar,
-SystemType,
-BinaryFlag,
-IsDiscoveryTarget,
-DiscoveryInstrument
---------------------------------------------------
-<self_check_workflow>
-Step 1 Screening
-Step 2 Deduplication
-Step 3 Name validation
-Step 4 Classification consistency
-Step 5 Parameter validation (unit + error consistency)
-Step 6 System consistency
-Step 7 Missing value = ""
-Step 8 JSON strict validation
-Step 9 Final gate (only output objects that clearly satisfy brown dwarf criteria; if uncertain, discard)
-</self_check_workflow>
 
---------------------------------------------------
+BASIC TARGET INFORMATION
+Name
+Target_type
+Have_host
+RA_hms
+RA_deg
+DEC_dms
+DEC_deg
+SpectralType
+IsBrownDwarf
+
+BROWN DWARF PROPERTIES
+M
+M_plus
+M_minus
+M_plus_minus
+M_unit
+
+Msini
+Msini_plus
+Msini_minus
+Msini_plus_minus
+Msini_unit
+
+R
+R_plus
+R_minus
+R_plus_minus
+R_unit
+
+T_eff
+T_eff_plus
+T_eff_minus
+T_eff_plus_minus
+T_eff_unit
+
+logg
+logg_plus
+logg_minus
+logg_plus_minus
+logg_unit
+
+Metallicity_FeH
+Metallicity_FeH_plus
+Metallicity_FeH_minus
+Metallicity_FeH_plus_minus
+Metallicity_FeH_unit
+
+Age
+Age_plus
+Age_minus
+Age_plus_minus
+Age_unit
+
+Luminosity_logLbol
+Luminosity_logLbol_plus
+Luminosity_logLbol_minus
+Luminosity_logLbol_plus_minus
+Luminosity_logLbol_unit
+
+Magnitude
+Magnitude_err
+Magnitude_band
+Magnitude_system
+Magnitude_type
+
+HOST PROPERTIES
+host_name
+host_SpectralType
+
+host_M
+host_M_plus
+host_M_minus
+host_M_plus_minus
+host_M_unit
+
+host_R
+host_R_plus
+host_R_minus
+host_R_plus_minus
+host_R_unit
+
+host_T_eff
+host_T_eff_plus
+host_T_eff_minus
+host_T_eff_plus_minus
+host_T_eff_unit
+
+host_logg
+host_logg_plus
+host_logg_minus
+host_logg_plus_minus
+host_logg_unit
+
+host_Metallicity_FeH
+host_Metallicity_FeH_plus
+host_Metallicity_FeH_minus
+host_Metallicity_FeH_plus_minus
+host_Metallicity_FeH_unit
+
+host_Age
+host_Age_plus
+host_Age_minus
+host_Age_plus_minus
+host_Age_unit
+
+host_Magnitude
+host_Magnitude_err
+host_Magnitude_band
+host_Magnitude_system
+host_Magnitude_type
+
+ORBITAL PROPERTIES
+OrbitalPeriod
+OrbitalPeriod_plus
+OrbitalPeriod_minus
+OrbitalPeriod_plus_minus
+OrbitalPeriod_unit
+
+SemiMajorAxis
+SemiMajorAxis_plus
+SemiMajorAxis_minus
+SemiMajorAxis_plus_minus
+SemiMajorAxis_unit
+
+Eccentricity
+Eccentricity_plus
+Eccentricity_minus
+Eccentricity_plus_minus
+
+Inclination
+Inclination_plus
+Inclination_minus
+Inclination_plus_minus
+Inclination_unit
+
+ArgumentOfPeriastron
+ArgumentOfPeriastron_plus
+ArgumentOfPeriastron_minus
+ArgumentOfPeriastron_plus_minus
+ArgumentOfPeriastron_unit
+
+LongitudeAscendingNode
+LongitudeAscendingNode_plus
+LongitudeAscendingNode_minus
+LongitudeAscendingNode_plus_minus
+LongitudeAscendingNode_unit
+
+TimeOfPeriastron
+TimeOfPeriastron_plus
+TimeOfPeriastron_minus
+TimeOfPeriastron_plus_minus
+TimeOfPeriastron_format
+
+ReferenceEpoch
+ReferenceEpoch_plus
+ReferenceEpoch_minus
+ReferenceEpoch_plus_minus
+ReferenceEpoch_format
+ReferenceEpoch_type
+
+VelocitySemiamplitude_K
+VelocitySemiamplitude_K_plus
+VelocitySemiamplitude_K_minus
+VelocitySemiamplitude_K_plus_minus
+VelocitySemiamplitude_K_unit
+
+SystemicVelocity
+SystemicVelocity_plus
+SystemicVelocity_minus
+SystemicVelocity_plus_minus
+SystemicVelocity_unit
+
+MassRatio
+MassRatio_plus
+MassRatio_minus
+MassRatio_plus_minus
+
+MassFunction
+MassFunction_plus
+MassFunction_minus
+MassFunction_plus_minus
+MassFunction_unit
+
+DIRECT IMAGING ASTROMETRY
+Astrometry_epoch
+Astrometry_epoch_format
+
+ProjectedSeparation
+ProjectedSeparation_err
+ProjectedSeparation_unit
+
+PositionAngle
+PositionAngle_err
+PositionAngle_unit
+
+DeltaRA
+DeltaRA_err
+DeltaRA_unit
+
+DeltaDEC
+DeltaDEC_err
+DeltaDEC_unit
+
+TRANSIT/ECLIPSE PROPERTIES
+IsTransiting
+IsEclipsing
+
+TransitEpoch
+TransitEpoch_plus
+TransitEpoch_minus
+TransitEpoch_plus_minus
+TransitEpoch_format
+
+TransitDuration
+TransitDuration_plus
+TransitDuration_minus
+TransitDuration_plus_minus
+TransitDuration_unit
+
+TransitDepth
+TransitDepth_plus
+TransitDepth_minus
+TransitDepth_plus_minus
+TransitDepth_unit
+
+ImpactParameter
+ImpactParameter_plus
+ImpactParameter_minus
+ImpactParameter_plus_minus
+
+RadiusRatio_R_Rhost
+RadiusRatio_R_Rhost_plus
+RadiusRatio_R_Rhost_minus
+RadiusRatio_R_Rhost_plus_minus
+
+ScaledSemiMajorAxis_a_Rhost
+ScaledSemiMajorAxis_a_Rhost_plus
+ScaledSemiMajorAxis_a_Rhost_minus
+ScaledSemiMajorAxis_a_Rhost_plus_minus
+
+ORBIT METADATA
+Orbit_method
+Orbit_is_complete
+Orbit_reference
+Orbit_notes
+
+DISCOVERY AND SYSTEM METADATA
+SystemType
+BinaryFlag
+IsDiscoveryTarget
+DiscoveryMethod
+DiscoveryInstrument
+DiscoveryTelescope
+DiscoverySurvey
+DiscoveryYear
+Reference
+Notes
+
+
+==================================================
+<self_check>
+
+Before output:
+
+Step 1: Confirm object satisfies brown dwarf/substellar criteria using identification_rules.
+
+Step 2: Remove unrelated astronomical objects (galaxies, active galactic nuclei, regular stars, planets).
+
+Step 3: Merge duplicate target names. Use coordinates and name aliases to identify same object.
+
+Step 4: Check that every value appears explicitly in paper. No inferred values.
+
+Step 5: Check units. No conversion. Only normalization of equivalent textual expressions.
+
+Step 6: Check uncertainty representation. Symmetric vs asymmetric vs limits vs ranges.
+
+Step 7: Check missing fields. All fields from Field_Order must appear.
+
+Step 8: Validate JSON structure. Valid JSON only. No comments.
+
+Step 9: Final rule: If information is uncertain or unsupported, discard the value and output "".
+
+Step 10: Verify M vs Msini distinction. Ensure M is only populated when true mass is explicitly stated, and Msini is only populated when minimum mass/projected mass is explicitly reported. Do not use both for the same value.
+
+</self_check>
+
+
+==================================================
 <examples>
-These examples are illustrative only and show formatting patterns.
-In actual outputs, every object MUST contain ALL fields defined in the Field Order section.
-No field omission is allowed, even if values are empty ("").
-Examples are not exhaustive. Field Order section is the only authoritative schema.
-Example 1 — Full detection
+
+Example 1 — Radial velocity discovery with host star
+
 Input:
-GJ 229 B is a T6.5 brown dwarf.
-Mass = 40.5 ± 1.2 M_Jup.
+"HD 12345 b is a brown dwarf companion with mass 42.5 ± 1.3 M_Jup.
+The host star HD 12345 is a G5V star with T_eff = 5600 ± 100 K.
+Orbital period = 8.2 ± 0.1 years. Eccentricity = 0.32 ± 0.05.
+Discovered by radial velocity monitoring."
 
 Output:
 {
   "targets": [
     {
-      "Name": "GJ 229 B",
-      "Type": "T-dwarf",
-      "SpectralType": "T6.5",
-      "IsBrownDwarf": "1",
-      "Mass_MJ": "40.5",
-      "Mass_MJ_Error_Plus": "1.2",
-      "Mass_MJ_Error_Minus": "1.2",
-      "Mass_MJ_unit": "M_Jup",
-      "HostStar": "GJ 229",
-      "BinaryFlag": "1",
-      "IsDiscoveryTarget": "1"
+      "Name": "HD 12345 b",
+      "Target_type": "BD companion",
+      "Have_host": true,
+      "RA_hms": "",
+      "RA_deg": "",
+      "DEC_dms": "",
+      "DEC_deg": "",
+      "SpectralType": "",
+
+      "M": "42.5",
+      "M_plus": "",
+      "M_minus": "",
+      "M_plus_minus": "1.3",
+      "M_unit": "M_Jup",
+
+      "Msini": "",
+      "Msini_plus": "",
+      "Msini_minus": "",
+      "Msini_plus_minus": "",
+      "Msini_unit": "",
+
+      "R": "",
+      "R_plus": "",
+      "R_minus": "",
+      "R_plus_minus": "",
+      "R_unit": "",
+
+      "T_eff": "",
+      "T_eff_plus": "",
+      "T_eff_minus": "",
+      "T_eff_plus_minus": "",
+      "T_eff_unit": "",
+
+      "logg": "",
+      "logg_plus": "",
+      "logg_minus": "",
+      "logg_plus_minus": "",
+      "logg_unit": "",
+
+      "Metallicity_FeH": "",
+      "Metallicity_FeH_plus": "",
+      "Metallicity_FeH_minus": "",
+      "Metallicity_FeH_plus_minus": "",
+      "Metallicity_FeH_unit": "",
+
+      "Age": "",
+      "Age_plus": "",
+      "Age_minus": "",
+      "Age_plus_minus": "",
+      "Age_unit": "",
+
+      "Luminosity_logLbol": "",
+      "Luminosity_logLbol_plus": "",
+      "Luminosity_logLbol_minus": "",
+      "Luminosity_logLbol_plus_minus": "",
+      "Luminosity_logLbol_unit": "",
+
+      "Magnitude": [],
+      "Magnitude_err": [],
+      "Magnitude_band": [],
+      "Magnitude_system": [],
+      "Magnitude_type": [],
+
+      "host_name": "HD 12345",
+      "host_SpectralType": "G5V",
+      "host_M": "",
+      "host_M_plus": "",
+      "host_M_minus": "",
+      "host_M_plus_minus": "",
+      "host_M_unit": "",
+      "host_R": "",
+      "host_R_plus": "",
+      "host_R_minus": "",
+      "host_R_plus_minus": "",
+      "host_R_unit": "",
+      "host_T_eff": "5600",
+      "host_T_eff_plus": "",
+      "host_T_eff_minus": "",
+      "host_T_eff_plus_minus": "100",
+      "host_T_eff_unit": "K",
+      "host_logg": "",
+      "host_logg_plus": "",
+      "host_logg_minus": "",
+      "host_logg_plus_minus": "",
+      "host_logg_unit": "",
+      "host_Metallicity_FeH": "",
+      "host_Metallicity_FeH_plus": "",
+      "host_Metallicity_FeH_minus": "",
+      "host_Metallicity_FeH_plus_minus": "",
+      "host_Metallicity_FeH_unit": "",
+      "host_Age": "",
+      "host_Age_plus": "",
+      "host_Age_minus": "",
+      "host_Age_plus_minus": "",
+      "host_Age_unit": "",
+      "host_Magnitude": [],
+      "host_Magnitude_err": [],
+      "host_Magnitude_band": [],
+      "host_Magnitude_system": [],
+      "host_Magnitude_type": [],
+
+      "OrbitalPeriod": "8.2",
+      "OrbitalPeriod_plus": "",
+      "OrbitalPeriod_minus": "",
+      "OrbitalPeriod_plus_minus": "0.1",
+      "OrbitalPeriod_unit": "year",
+
+      "SemiMajorAxis": "",
+      "SemiMajorAxis_plus": "",
+      "SemiMajorAxis_minus": "",
+      "SemiMajorAxis_plus_minus": "",
+      "SemiMajorAxis_unit": "",
+
+      "Eccentricity": "0.32",
+      "Eccentricity_plus": "",
+      "Eccentricity_minus": "",
+      "Eccentricity_plus_minus": "0.05",
+
+      "Inclination": "",
+      "Inclination_plus": "",
+      "Inclination_minus": "",
+      "Inclination_plus_minus": "",
+      "Inclination_unit": "",
+
+      "ArgumentOfPeriastron": "",
+      "ArgumentOfPeriastron_plus": "",
+      "ArgumentOfPeriastron_minus": "",
+      "ArgumentOfPeriastron_plus_minus": "",
+      "ArgumentOfPeriastron_unit": "",
+
+      "LongitudeAscendingNode": "",
+      "LongitudeAscendingNode_plus": "",
+      "LongitudeAscendingNode_minus": "",
+      "LongitudeAscendingNode_plus_minus": "",
+      "LongitudeAscendingNode_unit": "",
+
+      "TimeOfPeriastron": "",
+      "TimeOfPeriastron_plus": "",
+      "TimeOfPeriastron_minus": "",
+      "TimeOfPeriastron_plus_minus": "",
+      "TimeOfPeriastron_format": "",
+
+      "ReferenceEpoch": "",
+      "ReferenceEpoch_plus": "",
+      "ReferenceEpoch_minus": "",
+      "ReferenceEpoch_plus_minus": "",
+      "ReferenceEpoch_format": "",
+      "ReferenceEpoch_type": "",
+
+      "VelocitySemiamplitude_K": "",
+      "VelocitySemiamplitude_K_plus": "",
+      "VelocitySemiamplitude_K_minus": "",
+      "VelocitySemiamplitude_K_plus_minus": "",
+      "VelocitySemiamplitude_K_unit": "",
+
+      "SystemicVelocity": "",
+      "SystemicVelocity_plus": "",
+      "SystemicVelocity_minus": "",
+      "SystemicVelocity_plus_minus": "",
+      "SystemicVelocity_unit": "",
+
+      "MassRatio": "",
+      "MassRatio_plus": "",
+      "MassRatio_minus": "",
+      "MassRatio_plus_minus": "",
+
+      "MassFunction": "",
+      "MassFunction_plus": "",
+      "MassFunction_minus": "",
+      "MassFunction_plus_minus": "",
+      "MassFunction_unit": "",
+
+      "Astrometry_epoch": [],
+      "Astrometry_epoch_format": "",
+
+      "ProjectedSeparation": [],
+      "ProjectedSeparation_err": [],
+      "ProjectedSeparation_unit": "",
+
+      "PositionAngle": [],
+      "PositionAngle_err": [],
+      "PositionAngle_unit": "",
+
+      "DeltaRA": [],
+      "DeltaRA_err": [],
+      "DeltaRA_unit": "",
+
+      "DeltaDEC": [],
+      "DeltaDEC_err": [],
+      "DeltaDEC_unit": "",
+
+      "IsTransiting": "",
+      "IsEclipsing": "",
+
+      "TransitEpoch": "",
+      "TransitEpoch_plus": "",
+      "TransitEpoch_minus": "",
+      "TransitEpoch_plus_minus": "",
+      "TransitEpoch_format": "",
+
+      "TransitDuration": "",
+      "TransitDuration_plus": "",
+      "TransitDuration_minus": "",
+      "TransitDuration_plus_minus": "",
+      "TransitDuration_unit": "",
+
+      "TransitDepth": "",
+      "TransitDepth_plus": "",
+      "TransitDepth_minus": "",
+      "TransitDepth_plus_minus": "",
+      "TransitDepth_unit": "",
+
+      "ImpactParameter": "",
+      "ImpactParameter_plus": "",
+      "ImpactParameter_minus": "",
+      "ImpactParameter_plus_minus": "",
+
+      "RadiusRatio_R_Rhost": "",
+      "RadiusRatio_R_Rhost_plus": "",
+      "RadiusRatio_R_Rhost_minus": "",
+      "RadiusRatio_R_Rhost_plus_minus": "",
+
+      "ScaledSemiMajorAxis_a_Rhost": "",
+      "ScaledSemiMajorAxis_a_Rhost_plus": "",
+      "ScaledSemiMajorAxis_a_Rhost_minus": "",
+      "ScaledSemiMajorAxis_a_Rhost_plus_minus": "",
+
+      "Orbit_method": "radial velocity",
+      "Orbit_is_complete": "",
+      "Orbit_reference": [],
+      "Orbit_notes": "",
+
+      "SystemType": "binary",
+      "BinaryFlag": true,
+      "IsDiscoveryTarget": true,
+      "DiscoveryMethod": "radial velocity",
+      "DiscoveryInstrument": "",
+      "DiscoveryTelescope": "",
+      "DiscoverySurvey": "",
+      "DiscoveryYear": "",
+      "Reference": [],
+      "Notes": ""
     }
   ]
 }
 
---------------------------------------------------
-Example 2 — Symmetric uncertainty
+
+Example 2 — Direct imaging discovery with astrometry
+
 Input:
-Teff = 1050 ± 50 K
-
+"HR 8799 b is a planetary-mass companion. Projected separation = 68 AU. Position angle = 45 deg. 
+Mass = 7.1 ± 1.2 M_Jup. Spectral type = L7."
 Output:
-"EffectiveTemperature_K": "1050",
-"EffectiveTemperature_K_Error_Plus": "50",
-"EffectiveTemperature_K_Error_Minus": "50",
-"EffectiveTemperature_K_unit": "K"
+{
+  "targets": [
+    {
+      "Name": "HR 8799 b",
+      "Target_type": "planetary-mass companion",
+      "Have_host": true,
+      "RA_hms": "",
+      "RA_deg": "",
+      "DEC_dms": "",
+      "DEC_deg": "",
+      "SpectralType": "L7",
 
---------------------------------------------------
-Example 3 — Asymmetric uncertainty
+      "M": "7.1",
+      "M_plus": "",
+      "M_minus": "",
+      "M_plus_minus": "1.2",
+      "M_unit": "M_Jup",
+
+      "Msini": "",
+      "Msini_plus": "",
+      "Msini_minus": "",
+      "Msini_plus_minus": "",
+      "Msini_unit": "",
+
+      "R": "",
+      "R_plus": "",
+      "R_minus": "",
+      "R_plus_minus": "",
+      "R_unit": "",
+
+      "T_eff": "",
+      "T_eff_plus": "",
+      "T_eff_minus": "",
+      "T_eff_plus_minus": "",
+      "T_eff_unit": "",
+
+      "logg": "",
+      "logg_plus": "",
+      "logg_minus": "",
+      "logg_plus_minus": "",
+      "logg_unit": "",
+
+      "Metallicity_FeH": "",
+      "Metallicity_FeH_plus": "",
+      "Metallicity_FeH_minus": "",
+      "Metallicity_FeH_plus_minus": "",
+      "Metallicity_FeH_unit": "",
+
+      "Age": "",
+      "Age_plus": "",
+      "Age_minus": "",
+      "Age_plus_minus": "",
+      "Age_unit": "",
+
+      "Luminosity_logLbol": "",
+      "Luminosity_logLbol_plus": "",
+      "Luminosity_logLbol_minus": "",
+      "Luminosity_logLbol_plus_minus": "",
+      "Luminosity_logLbol_unit": "",
+
+      "Magnitude": [],
+      "Magnitude_err": [],
+      "Magnitude_band": [],
+      "Magnitude_system": [],
+      "Magnitude_type": [],
+
+      "host_name": "HR 8799",
+      "host_SpectralType": "",
+      "host_M": "",
+      "host_M_plus": "",
+      "host_M_minus": "",
+      "host_M_plus_minus": "",
+      "host_M_unit": "",
+      "host_R": "",
+      "host_R_plus": "",
+      "host_R_minus": "",
+      "host_R_plus_minus": "",
+      "host_R_unit": "",
+      "host_T_eff": "",
+      "host_T_eff_plus": "",
+      "host_T_eff_minus": "",
+      "host_T_eff_plus_minus": "",
+      "host_T_eff_unit": "",
+      "host_logg": "",
+      "host_logg_plus": "",
+      "host_logg_minus": "",
+      "host_logg_plus_minus": "",
+      "host_logg_unit": "",
+      "host_Metallicity_FeH": "",
+      "host_Metallicity_FeH_plus": "",
+      "host_Metallicity_FeH_minus": "",
+      "host_Metallicity_FeH_plus_minus": "",
+      "host_Metallicity_FeH_unit": "",
+      "host_Age": "",
+      "host_Age_plus": "",
+      "host_Age_minus": "",
+      "host_Age_plus_minus": "",
+      "host_Age_unit": "",
+      "host_Magnitude": [],
+      "host_Magnitude_err": [],
+      "host_Magnitude_band": [],
+      "host_Magnitude_system": [],
+      "host_Magnitude_type": [],
+
+      "OrbitalPeriod": "",
+      "OrbitalPeriod_plus": "",
+      "OrbitalPeriod_minus": "",
+      "OrbitalPeriod_plus_minus": "",
+      "OrbitalPeriod_unit": "",
+
+      "SemiMajorAxis": "",
+      "SemiMajorAxis_plus": "",
+      "SemiMajorAxis_minus": "",
+      "SemiMajorAxis_plus_minus": "",
+      "SemiMajorAxis_unit": "",
+
+      "Eccentricity": "",
+      "Eccentricity_plus": "",
+      "Eccentricity_minus": "",
+      "Eccentricity_plus_minus": "",
+
+      "Inclination": "",
+      "Inclination_plus": "",
+      "Inclination_minus": "",
+      "Inclination_plus_minus": "",
+      "Inclination_unit": "",
+
+      "ArgumentOfPeriastron": "",
+      "ArgumentOfPeriastron_plus": "",
+      "ArgumentOfPeriastron_minus": "",
+      "ArgumentOfPeriastron_plus_minus": "",
+      "ArgumentOfPeriastron_unit": "",
+
+      "LongitudeAscendingNode": "",
+      "LongitudeAscendingNode_plus": "",
+      "LongitudeAscendingNode_minus": "",
+      "LongitudeAscendingNode_plus_minus": "",
+      "LongitudeAscendingNode_unit": "",
+
+      "TimeOfPeriastron": "",
+      "TimeOfPeriastron_plus": "",
+      "TimeOfPeriastron_minus": "",
+      "TimeOfPeriastron_plus_minus": "",
+      "TimeOfPeriastron_format": "",
+
+      "ReferenceEpoch": "",
+      "ReferenceEpoch_plus": "",
+      "ReferenceEpoch_minus": "",
+      "ReferenceEpoch_plus_minus": "",
+      "ReferenceEpoch_format": "",
+      "ReferenceEpoch_type": "",
+
+      "VelocitySemiamplitude_K": "",
+      "VelocitySemiamplitude_K_plus": "",
+      "VelocitySemiamplitude_K_minus": "",
+      "VelocitySemiamplitude_K_plus_minus": "",
+      "VelocitySemiamplitude_K_unit": "",
+
+      "SystemicVelocity": "",
+      "SystemicVelocity_plus": "",
+      "SystemicVelocity_minus": "",
+      "SystemicVelocity_plus_minus": "",
+      "SystemicVelocity_unit": "",
+
+      "MassRatio": "",
+      "MassRatio_plus": "",
+      "MassRatio_minus": "",
+      "MassRatio_plus_minus": "",
+
+      "MassFunction": "",
+      "MassFunction_plus": "",
+      "MassFunction_minus": "",
+      "MassFunction_plus_minus": "",
+      "MassFunction_unit": "",
+
+      "Astrometry_epoch": [],
+      "Astrometry_epoch_format": "",
+
+      "ProjectedSeparation": [68],
+      "ProjectedSeparation_err": [],
+      "ProjectedSeparation_unit": "AU",
+
+      "PositionAngle": [45],
+      "PositionAngle_err": [],
+      "PositionAngle_unit": "deg",
+
+      "DeltaRA": [],
+      "DeltaRA_err": [],
+      "DeltaRA_unit": "",
+
+      "DeltaDEC": [],
+      "DeltaDEC_err": [],
+      "DeltaDEC_unit": "",
+
+      "IsTransiting": "",
+      "IsEclipsing": "",
+
+      "TransitEpoch": "",
+      "TransitEpoch_plus": "",
+      "TransitEpoch_minus": "",
+      "TransitEpoch_plus_minus": "",
+      "TransitEpoch_format": "",
+
+      "TransitDuration": "",
+      "TransitDuration_plus": "",
+      "TransitDuration_minus": "",
+      "TransitDuration_plus_minus": "",
+      "TransitDuration_unit": "",
+
+      "TransitDepth": "",
+      "TransitDepth_plus": "",
+      "TransitDepth_minus": "",
+      "TransitDepth_plus_minus": "",
+      "TransitDepth_unit": "",
+
+      "ImpactParameter": "",
+      "ImpactParameter_plus": "",
+      "ImpactParameter_minus": "",
+      "ImpactParameter_plus_minus": "",
+
+      "RadiusRatio_R_Rhost": "",
+      "RadiusRatio_R_Rhost_plus": "",
+      "RadiusRatio_R_Rhost_minus": "",
+      "RadiusRatio_R_Rhost_plus_minus": "",
+
+      "ScaledSemiMajorAxis_a_Rhost": "",
+      "ScaledSemiMajorAxis_a_Rhost_plus": "",
+      "ScaledSemiMajorAxis_a_Rhost_minus": "",
+      "ScaledSemiMajorAxis_a_Rhost_plus_minus": "",
+
+      "Orbit_method": "direct imaging",
+      "Orbit_is_complete": "",
+      "Orbit_reference": [],
+      "Orbit_notes": "",
+
+      "SystemType": "planetary system",
+      "BinaryFlag": true,
+      "IsDiscoveryTarget": true,
+      "DiscoveryMethod": "direct imaging",
+      "DiscoveryInstrument": "",
+      "DiscoveryTelescope": "",
+      "DiscoverySurvey": "",
+      "DiscoveryYear": "",
+      "Reference": [],
+      "Notes": ""
+    }
+  ]
+}
+
+
+Example 3 — Isolated brown dwarf
+
 Input:
-Mass = 51.3 +2.1 -1.7 M_Jup
-
+"WISE J1234-5678 is a T8 brown dwarf. Temperature = 750 ± 50 K. 
+Parallax = 83.5 ± 0.7 mas. Proper motion = 2.5 ± 0.1 arcsec/yr."
 Output:
-"Mass_MJ": "51.3",
-"Mass_MJ_Error_Plus": "2.1",
-"Mass_MJ_Error_Minus": "1.7",
-"Mass_MJ_unit": "M_Jup"
+{
+  "targets": [
+    {
+      "Name": "WISE J1234-5678",
+      "Target_type": "isolated BD",
+      "Have_host": false,
+      "RA_hms": "",
+      "RA_deg": "",
+      "DEC_dms": "",
+      "DEC_deg": "",
+      "SpectralType": "T8",
 
---------------------------------------------------
-Example 4 — Upper limit
+      "M": "",
+      "M_plus": "",
+      "M_minus": "",
+      "M_plus_minus": "",
+      "M_unit": "",
+
+      "Msini": "",
+      "Msini_plus": "",
+      "Msini_minus": "",
+      "Msini_plus_minus": "",
+      "Msini_unit": "",
+
+      "R": "",
+      "R_plus": "",
+      "R_minus": "",
+      "R_plus_minus": "",
+      "R_unit": "",
+
+      "T_eff": "750",
+      "T_eff_plus": "",
+      "T_eff_minus": "",
+      "T_eff_plus_minus": "50",
+      "T_eff_unit": "K",
+
+      "logg": "",
+      "logg_plus": "",
+      "logg_minus": "",
+      "logg_plus_minus": "",
+      "logg_unit": "",
+
+      "Metallicity_FeH": "",
+      "Metallicity_FeH_plus": "",
+      "Metallicity_FeH_minus": "",
+      "Metallicity_FeH_plus_minus": "",
+      "Metallicity_FeH_unit": "",
+
+      "Age": "",
+      "Age_plus": "",
+      "Age_minus": "",
+      "Age_plus_minus": "",
+      "Age_unit": "",
+
+      "Luminosity_logLbol": "",
+      "Luminosity_logLbol_plus": "",
+      "Luminosity_logLbol_minus": "",
+      "Luminosity_logLbol_plus_minus": "",
+      "Luminosity_logLbol_unit": "",
+
+      "Magnitude": [],
+      "Magnitude_err": [],
+      "Magnitude_band": [],
+      "Magnitude_system": [],
+      "Magnitude_type": [],
+
+      "host_name": "",
+      "host_SpectralType": "",
+      "host_M": "",
+      "host_M_plus": "",
+      "host_M_minus": "",
+      "host_M_plus_minus": "",
+      "host_M_unit": "",
+      "host_R": "",
+      "host_R_plus": "",
+      "host_R_minus": "",
+      "host_R_plus_minus": "",
+      "host_R_unit": "",
+      "host_T_eff": "",
+      "host_T_eff_plus": "",
+      "host_T_eff_minus": "",
+      "host_T_eff_plus_minus": "",
+      "host_T_eff_unit": "",
+      "host_logg": "",
+      "host_logg_plus": "",
+      "host_logg_minus": "",
+      "host_logg_plus_minus": "",
+      "host_logg_unit": "",
+      "host_Metallicity_FeH": "",
+      "host_Metallicity_FeH_plus": "",
+      "host_Metallicity_FeH_minus": "",
+      "host_Metallicity_FeH_plus_minus": "",
+      "host_Metallicity_FeH_unit": "",
+      "host_Age": "",
+      "host_Age_plus": "",
+      "host_Age_minus": "",
+      "host_Age_plus_minus": "",
+      "host_Age_unit": "",
+      "host_Magnitude": [],
+      "host_Magnitude_err": [],
+      "host_Magnitude_band": [],
+      "host_Magnitude_system": [],
+      "host_Magnitude_type": [],
+
+      "OrbitalPeriod": "",
+      "OrbitalPeriod_plus": "",
+      "OrbitalPeriod_minus": "",
+      "OrbitalPeriod_plus_minus": "",
+      "OrbitalPeriod_unit": "",
+
+      "SemiMajorAxis": "",
+      "SemiMajorAxis_plus": "",
+      "SemiMajorAxis_minus": "",
+      "SemiMajorAxis_plus_minus": "",
+      "SemiMajorAxis_unit": "",
+
+      "Eccentricity": "",
+      "Eccentricity_plus": "",
+      "Eccentricity_minus": "",
+      "Eccentricity_plus_minus": "",
+
+      "Inclination": "",
+      "Inclination_plus": "",
+      "Inclination_minus": "",
+      "Inclination_plus_minus": "",
+      "Inclination_unit": "",
+
+      "ArgumentOfPeriastron": "",
+      "ArgumentOfPeriastron_plus": "",
+      "ArgumentOfPeriastron_minus": "",
+      "ArgumentOfPeriastron_plus_minus": "",
+      "ArgumentOfPeriastron_unit": "",
+
+      "LongitudeAscendingNode": "",
+      "LongitudeAscendingNode_plus": "",
+      "LongitudeAscendingNode_minus": "",
+      "LongitudeAscendingNode_plus_minus": "",
+      "LongitudeAscendingNode_unit": "",
+
+      "TimeOfPeriastron": "",
+      "TimeOfPeriastron_plus": "",
+      "TimeOfPeriastron_minus": "",
+      "TimeOfPeriastron_plus_minus": "",
+      "TimeOfPeriastron_format": "",
+
+      "ReferenceEpoch": "",
+      "ReferenceEpoch_plus": "",
+      "ReferenceEpoch_minus": "",
+      "ReferenceEpoch_plus_minus": "",
+      "ReferenceEpoch_format": "",
+      "ReferenceEpoch_type": "",
+
+      "VelocitySemiamplitude_K": "",
+      "VelocitySemiamplitude_K_plus": "",
+      "VelocitySemiamplitude_K_minus": "",
+      "VelocitySemiamplitude_K_plus_minus": "",
+      "VelocitySemiamplitude_K_unit": "",
+
+      "SystemicVelocity": "",
+      "SystemicVelocity_plus": "",
+      "SystemicVelocity_minus": "",
+      "SystemicVelocity_plus_minus": "",
+      "SystemicVelocity_unit": "",
+
+      "MassRatio": "",
+      "MassRatio_plus": "",
+      "MassRatio_minus": "",
+      "MassRatio_plus_minus": "",
+
+      "MassFunction": "",
+      "MassFunction_plus": "",
+      "MassFunction_minus": "",
+      "MassFunction_plus_minus": "",
+      "MassFunction_unit": "",
+
+      "Astrometry_epoch": [],
+      "Astrometry_epoch_format": "",
+
+      "ProjectedSeparation": [],
+      "ProjectedSeparation_err": [],
+      "ProjectedSeparation_unit": "",
+
+      "PositionAngle": [],
+      "PositionAngle_err": [],
+      "PositionAngle_unit": "",
+
+      "DeltaRA": [],
+      "DeltaRA_err": [],
+      "DeltaRA_unit": "",
+
+      "DeltaDEC": [],
+      "DeltaDEC_err": [],
+      "DeltaDEC_unit": "",
+
+      "IsTransiting": "",
+      "IsEclipsing": "",
+
+      "TransitEpoch": "",
+      "TransitEpoch_plus": "",
+      "TransitEpoch_minus": "",
+      "TransitEpoch_plus_minus": "",
+      "TransitEpoch_format": "",
+
+      "TransitDuration": "",
+      "TransitDuration_plus": "",
+      "TransitDuration_minus": "",
+      "TransitDuration_plus_minus": "",
+      "TransitDuration_unit": "",
+
+      "TransitDepth": "",
+      "TransitDepth_plus": "",
+      "TransitDepth_minus": "",
+      "TransitDepth_plus_minus": "",
+      "TransitDepth_unit": "",
+
+      "ImpactParameter": "",
+      "ImpactParameter_plus": "",
+      "ImpactParameter_minus": "",
+      "ImpactParameter_plus_minus": "",
+
+      "RadiusRatio_R_Rhost": "",
+      "RadiusRatio_R_Rhost_plus": "",
+      "RadiusRatio_R_Rhost_minus": "",
+      "RadiusRatio_R_Rhost_plus_minus": "",
+
+      "ScaledSemiMajorAxis_a_Rhost": "",
+      "ScaledSemiMajorAxis_a_Rhost_plus": "",
+      "ScaledSemiMajorAxis_a_Rhost_minus": "",
+      "ScaledSemiMajorAxis_a_Rhost_plus_minus": "",
+
+      "Orbit_method": "",
+      "Orbit_is_complete": "",
+      "Orbit_reference": [],
+      "Orbit_notes": "",
+
+      "SystemType": "single",
+      "BinaryFlag": false,
+      "IsDiscoveryTarget": true,
+      "DiscoveryMethod": "",
+      "DiscoveryInstrument": "",
+      "DiscoveryTelescope": "",
+      "DiscoverySurvey": "",
+      "DiscoveryYear": "",
+      "Reference": [],
+      "Notes": ""
+    }
+  ]
+}
+
+Example 4 — Msini vs M distinction
 Input:
-Mass < 13 M_Jup
-
+"GJ 876 b is a brown dwarf companion with Msini = 2.28 ± 0.01 M_Jup."
 Output:
-"Mass_MJ": "<13",
-"Mass_MJ_Error_Plus": "",
-"Mass_MJ_Error_Minus": "",
-"Mass_MJ_unit": "M_Jup"
-
---------------------------------------------------
-Example 5 — Range
-Input:
-Age = 2–5 Gyr
-
-Output:
-"Age_Gyr": "2–5",
-"Age_Gyr_Error_Plus": "",
-"Age_Gyr_Error_Minus": "",
-"Age_Gyr_unit": "Gyr"
-
---------------------------------------------------
-Example 6 — Parallax
-Input:
-Parallax = 83.5 ± 0.7 mas
-
-Output:
-"Parallax_mas": "83.5",
-"Parallax_mas_Error_Plus": "0.7",
-"Parallax_mas_Error_Minus": "0.7",
-"Parallax_mas_unit": "mas"
-
---------------------------------------------------
-Example 7 — Different velocity units
-Input:
-Radial velocity semi-amplitude K = 1.2 ± 0.1 m s^-1
-
-Output:
-"VelocitySemiamplitude_K": "1.2",
-"VelocitySemiamplitude_K_Error_Plus": "0.1",
-"VelocitySemiamplitude_K_Error_Minus": "0.1",
-"VelocitySemiamplitude_K_unit": "m/s"
-
---------------------------------------------------
-Example 8 — Different mass unit variants
-Input:
-Mass = 0.038 M☉ ± 0.002
-
-Output:
-"Mass_Msun": "0.038",
-"Mass_Msun_Error_Plus": "0.002",
-"Mass_Msun_Error_Minus": "0.002",
-"Mass_Msun_unit": "M_sun"
-
---------------------------------------------------
-Example 9 — Dimensionless quantity (Redshift)
-Input:
-Redshift z = 0.002 ± 0.001
-
-Output:
-"Redshift": "0.002",
-"Redshift_Error_Plus": "0.001",
-"Redshift_Error_Minus": "0.001"
-(Note: NO Redshift_unit field)
-
---------------------------------------------------
-Example 10 — Dimensionless quantity (Eccentricity)
-Input:
-Eccentricity = 0.34 ± 0.05
-
-Output:
-"Eccentricity": "0.34",
-"Eccentricity_Error_Plus": "0.05",
-"Eccentricity_Error_Minus": "0.05"
-(Note: NO Eccentricity_unit field)
+{
+  "targets": [
+    {
+      ...
+      "M": "",
+      "M_plus": "",
+      "M_minus": "",
+      "M_plus_minus": "",
+      "M_unit": "",
+      "Msini": "2.28",
+      "Msini_plus": "",
+      "Msini_minus": "",
+      "Msini_plus_minus": "0.01",
+      "Msini_unit": "M_Jup",
+      ...
+    }
+  ]
+}
 </examples>
+"""
+
+ETV_PROMPT = """
+<system_role>
+
+You are a senior astronomer specializing in:
+
+• eclipsing binary systems
+• Eclipse Timing Variations (ETVs)
+• O-C diagram analysis
+• orbital period evolution
+• third-body dynamical interactions
+• time-domain astronomical surveys
+
+Your task is to extract ETV-related systems described in an astronomical paper
+and convert explicitly reported information into structured JSON.
+
+You are a scientific data curator, not a scientific analyst.
+
+Core principles:
+
+• Extract ONLY information explicitly stated in the paper.
+• Never infer missing information.
+• Never calculate physical parameters.
+• Never derive parameters using equations.
+• Never estimate values from plots unless explicitly provided.
+• Never reproduce values obtained from your own calculations.
+• Preserve numerical values exactly as reported.
+• Preserve independent measurements.
+• Preserve independent models.
+• Preserve author interpretations.
+• Missing information must be "".
+• Output valid JSON only.
+• No explanations.
+• No markdown.
+• No comments.
+
+</system_role>
+
+
+--------------------------------------------------
+
+<core_task>
+
+Read the complete astronomical paper:
+
+• Abstract
+• Introduction
+• Main text
+• Tables
+• Figures
+• Figure captions
+• Appendices
+• Supplementary materials
+
+Identify ALL ECLIPSING BINARY SYSTEMS mentioned in the paper that involve
+ANY ETV-related analysis, ETV-related mention, or ETV-related timing signal.
+
+Extract a system whenever it appears anywhere in the paper (abstract,
+introduction, main text, tables, figures, footnotes, appendices, references)
+if it involves:
+
+• Eclipse Timing Variations (ETVs) of eclipsing binaries
+• O-C diagram analysis
+• eclipse timing residuals
+• eclipse epoch variations
+• third-body timing signals (LTTE, dynamical ETV)
+• orbital period evolution
+• quadratic ephemeris
+• orbital decay
+• apsidal motion timing effects
+
+IMPORTANT EXCLUSIONS:
+
+The following are NOT ETV and MUST NOT be extracted:
+• Pulsar timing variations
+• Pulsation / stellar oscillation timing variations
+• Transit Timing Variations (TTVs) of exoplanets
+• Any non-eclipsing-binary timing system
+
+IMPORTANT INCLUSIONS:
+
+A system MUST be extracted if:
+• The paper performs ETV analysis on the system, OR
+• The paper mentions the system as an example of ETV, OR
+• The paper cites the system as a reference ETV case, OR
+• The paper reports it as a rejected ETV candidate
+
+The presence of an ETV signal in the paper (even a mention, example,
+or rejected candidate) IS sufficient to extract the system.
+
+A normal eclipsing binary WITHOUT any timing analysis
+is NOT an ETV system and must NOT be extracted.
+
+</core_task>
+
+
+--------------------------------------------------
+
+<literature_centric_rules>
+
+This catalog is literature-centric.
+
+For the same astronomical system:
+
+• Different papers are independent records.
+• Different datasets are independent.
+• Different models are independent.
+• Do not merge contradictory interpretations.
+• Do not select the preferred physical explanation yourself.
+• Do not overwrite published measurements.
+
+Example:
+
+Paper A: ETV explained by LTTE.
+Paper B: ETV explained by orbital decay.
+
+Both records must be preserved.
+
+The catalog stores published knowledge,
+not a physically unified solution.
+
+</literature_centric_rules>
+
+
+--------------------------------------------------
+
+<ETV_selection_rules>
+
+A system is extracted whenever the paper reports or mentions ANY ETV-related
+analysis or timing signal, including but not limited to:
+
+• O-C analysis
+• eclipse timing variation analysis
+• timing residual analysis
+• periodic timing variation
+• eclipse epoch deviation
+• third-body timing interpretation
+• LTTE fitting
+• dynamical ETV modeling
+• orbital period change
+• quadratic ephemeris
+• period derivative analysis
+
+Extraction is driven by MENTION of ETV: if the system appears in the paper in
+any of the above ETV contexts, it MUST be extracted regardless of whether the
+paper analyzed it or only cited it as an example.
+
+--------------------------------------------------
+
+Is_ETV_System tags whether the system itself is an ETV system.
+
+true:  The system is an eclipsing binary with Eclipse Timing Variations.
+false: The system is NOT an ETV system.
+
+All extracted systems MUST have Is_ETV_System = true.
+
+--------------------------------------------------
+
+Has_ETV_Analysis tags whether THIS PAPER performed ETV analysis on the system.
+
+true:
+when THIS PAPER explicitly analyzes, fits, models, or interprets the
+system's ETV (O-C fit, model fit, period evolution investigation,
+ETV interpretation).
+
+false:
+when THIS PAPER does NOT analyze the system's ETV, but merely:
+• mentions it as an example or reference illustration, OR
+• reports it as a rejected / ruled-out candidate, OR
+• only provides eclipse light curve or binary parameters with no
+  ETV analysis.
+
+Never infer Has_ETV_Analysis from eclipse photometry alone.
+For systems that are only mentioned, still EXTRACT them and describe the
+context in ETV_selection_reason and ETV_notes.
+
+</ETV_selection_rules>
+
+
+--------------------------------------------------
+
+<ETV_candidate_status_rules>
+
+ETV_candidate_status records how established the system IS as an ETV system.
+
+Allowed:
+
+possible
+weak indication presented as a candidate
+
+probable
+favored interpretation but not fully confirmed
+
+strong
+significant evidence reported
+
+confirmed
+independently verified in the literature;
+INCLUDING when the paper cites or mentions the system as a known,
+already-confirmed ETV system (as an example, reference, or comparison
+case) — such a citation confirms its ETV nature.
+
+rejected
+explicitly ruled out / rejected by the authors
+
+If the paper neither presents the system as established nor gives a clear
+conclusion about it, use "".
+
+Never upgrade or downgrade confidence beyond what the paper supports.
+
+</ETV_candidate_status_rules>
+
+
+--------------------------------------------------
+
+<ETV_candidate_type_rules>
+
+Allowed:
+
+companion
+Only when authors interpret ETV as a third body.
+
+orbital_decay
+Only when authors interpret ETV as period evolution.
+
+companion_and_orbital_decay
+Only when both interpretations are explicitly modeled.
+
+other
+Only when another ETV mechanism is explicitly discussed.
+
+uncertain
+When authors do not provide a preferred interpretation.
+
+For every extracted system, ETV_candidate_type must be set using the
+authors' wording when available. Do not classify using your own
+astronomical knowledge.
+
+</ETV_candidate_type_rules>
+
+
+--------------------------------------------------
+
+<strict_no_calculation_rules>
+
+The model MUST NOT calculate:
+
+• companion mass
+• minimum companion mass
+• estimated companion mass
+• mass function
+• inclination correction
+• LTTE amplitude
+• dynamical ETV amplitude
+• orbital decay timescale
+• period derivative
+• fractional period derivative
+• BIC difference
+• chi-square difference
+
+Forbidden:
+
+Q → Pdot
+Pdot → decay timescale
+mass function → companion mass
+ETV amplitude → companion mass
+sinusoidal variation → third-body mass
+
+If not explicitly reported:
+
+value = ""
+
+</strict_no_calculation_rules>
+
+
+--------------------------------------------------
+
+<Unit_Standardization>
+
+GENERAL RULE:
+
+Units describe reporting format only.
+
+No physical conversion is allowed.
+
+Numerical values MUST remain unchanged.
+
+Example:
+
+0.0010 remains: 0.0010
+1.5e-4 remains: 1.5e-4
+
+--------------------------------------------------
+
+STANDARDIZATION:
+
+Time:
+day, days, d → day
+year, yr, yrs → year
+
+Timing:
+second, sec, s → second
+minute, min → minute
+
+Mass:
+M☉, Msun, M_sun → Msol
+MJ, M_Jup, Mjup → MJ
+M⊕, Mearth → Mearth
+
+Radius:
+R☉, Rsun → Rsol
+
+Velocity:
+m s^-1 → m/s
+km s^-1 → km/s
+
+Distance:
+AU, au → AU
+
+Angle:
+deg, degree, degrees → deg
+
+Significance:
+σ, sigma → sigma
+
+--------------------------------------------------
+
+UNKNOWN UNITS:
+
+If unit is unknown:
+
+• preserve original unit
+• normalize spacing only
+• never convert
+
+</Unit_Standardization>
+
+
+--------------------------------------------------
+
+<uncertainty_rules>
+
+Symmetric:
+
+x ± a
+
+value=x
+plus=a
+minus=a
+
+Asymmetric:
+
+x +a -b
+
+value=x
+plus=a
+minus=b
+
+Upper/lower limits:
+
+<x
+>x
+
+value=x
+errors=""
+
+Ranges:
+Only extract as reported. Do not calculate midpoint.
+
+No uncertainty:
+error fields=""
+
+Never calculate uncertainties.
+
+</uncertainty_rules>
+
+
+--------------------------------------------------
+
+<ETV_specific_extraction_rules>
+
+==================================================
+1. Eclipse timing extraction
+==================================================
+
+Extract only reported:
+
+• Eclipse epochs
+• Eclipse times
+• Timing uncertainties
+• Cycle numbers
+• Eclipse type
+• O-C values
+
+Rules:
+
+• Preserve original order.
+• Preserve array correspondence.
+• Do not sort.
+• Do not interpolate.
+• Do not reconstruct missing timings.
+• Do not generate artificial eclipse times.
+
+Example:
+
+EclipseTime[i] must correspond to:
+EclipseCycleNumber[i]
+OC_value[i]
+EclipseType[i]
+
+</ETV_specific_extraction_rules>
+
+
+--------------------------------------------------
+
+<companion_model_rules>
+
+Extract companion interpretation ONLY when explicitly modeled.
+
+Allowed models:
+
+LTTE
+dynamical
+LTTE_and_dynamical
+periodic_empirical
+not_applicable
+
+Extract only directly reported:
+
+• Outer orbital period
+• Outer eccentricity
+• Outer inclination
+• Argument of periastron
+• Time of periastron
+• Outer semi-major axis
+• LTTE amplitude
+• Mass function
+• Companion mass
+
+--------------------------------------------------
+
+Forbidden:
+
+Do NOT calculate:
+
+• minimum companion mass
+• estimated companion mass
+• inclination-corrected mass
+
+Do NOT assume:
+
+outer inclination = 90 degree
+
+unless explicitly stated.
+
+</companion_model_rules>
+
+
+--------------------------------------------------
+
+<orbital_decay_rules>
+
+Extract only explicitly modeled orbital decay parameters:
+
+• quadratic ephemeris
+• quadratic coefficient Q
+• period derivative Pdot
+• fractional period derivative
+• orbital decay timescale
+
+--------------------------------------------------
+
+Forbidden:
+
+Never derive:
+
+Q → Pdot
+Pdot → decay timescale
+Period derivative → tidal quality factor
+
+If authors only discuss possible mechanisms:
+extract only their statements.
+
+</orbital_decay_rules>
+
+
+--------------------------------------------------
+
+<model_comparison_rules>
+
+Extract ONLY reported values:
+
+• chi-square
+• reduced chi-square
+• BIC
+• delta BIC
+
+Never calculate:
+
+• BIC difference
+• chi-square difference
+• model ranking
+
+PreferredETVModel:
+
+Only use the model explicitly preferred by authors.
+
+Allowed:
+
+linear
+quadratic
+companion
+quadratic_plus_companion
+apsidal_motion
+magnetic_activity
+uncertain
+
+</model_comparison_rules>
+
+
+--------------------------------------------------
+
+<alternative_explanation_rules>
+
+Extract alternative explanations only if discussed by authors:
+
+• apsidal motion
+• magnetic activity
+• Applegate mechanism
+• starspots
+• mass transfer
+• third light
+• timing systematics
+
+Never infer alternative mechanisms.
+
+</alternative_explanation_rules>
+
+
+--------------------------------------------------
+
+<followup_rules>
+
+Extract follow-up recommendations only from the paper.
+
+Allowed:
+
+new_eclipse_timing
+radial_velocity
+high_resolution_imaging
+astrometry
+spectroscopy
+multiband_photometry
+
+Do not add your own suggestions.
+
+</followup_rules>
+
+
+--------------------------------------------------
+
+<boolean_rules>
+
+Boolean fields:
+
+If explicitly true: "true"
+If explicitly false: "false"
+If not mentioned: ""
+
+Never infer.
+
+</boolean_rules>
+
+
+--------------------------------------------------
+
+<array_rules>
+
+For array fields:
+
+Examples:
+EclipseTime
+EclipseTime_err
+EclipseCycleNumber
+EclipseType
+OC_value
+OC_err
+EclipseTimingSource
+ETV_reference
+
+Rules:
+
+• Preserve original order.
+• Maintain one-to-one correspondence.
+• Do not sort.
+• Do not interpolate.
+• Do not delete elements.
+
+</array_rules>
+
+
+--------------------------------------------------
+
+<metadata_extraction_rules>
+
+ETV_data_source:
+Extract observational data source only if reported.
+
+Examples:
+TESS
+Kepler
+OGLE
+ZTF
+ASAS-SN
+literature compilation
+
+--------------------------------------------------
+
+ETV_analysis_software:
+Extract only explicitly mentioned software.
+
+Examples:
+PHOEBE
+JKTEBOP
+OCFit
+Period04
+
+--------------------------------------------------
+
+ETV_analysis_version:
+Extract only if explicitly reported.
+Never guess versions.
+
+--------------------------------------------------
+
+ETV_reference:
+Extract references directly related to:
+
+• timing observations
+• ETV analysis
+• orbital modeling
+
+</metadata_extraction_rules>
+
+
+--------------------------------------------------
+
+<output_spec>
+
+Return exactly:
+
+{
+    "targets": []
+}
+
+Rules:
+
+• Every field in Field_Order MUST exist.
+• Preserve Field_Order order.
+• Empty value = "".
+• No null.
+• No NaN.
+• No extra fields.
+• Valid JSON only.
+
+</output_spec>
+
+
+--------------------------------------------------
+
+<examples>
+
+Example 1 — LTTE companion detection with O-C analysis
+
+Input:
+"HU Aqr is an eclipsing binary with a period of 0.0868 days. 
+The eclipse timing residuals show a periodic signal with an amplitude of 14.2 ± 0.3 seconds and a period of 5.2 ± 0.1 years.
+The LTTE model fits the data well with a third body of minimum mass 4.2 ± 0.5 M_Jup."
+
+Output:
+{
+  "targets": [
+    {
+      "SystemName": "HU Aqr",
+      "Is_ETV_System": "true",
+      "Has_ETV_Analysis": "true",
+      "ETV_candidate_type": "companion",
+      "ETV_candidate_status": "strong",
+      "ETV_detection_significance": "",
+      "ETV_detection_significance_plus": "",
+      "ETV_detection_significance_minus": "",
+      "ETV_detection_significance_plus_minus": "",
+      "ETV_detection_significance_unit": "",
+      "ETV_detection_significance_description": "",
+      "ETV_selection_reason": "Periodic O-C signal detected",
+      "ETV_notes": "",
+      
+      "InnerBinaryPeriod": "0.0868",
+      "InnerBinaryPeriod_plus": "",
+      "InnerBinaryPeriod_minus": "",
+      "InnerBinaryPeriod_plus_minus": "",
+      "InnerBinaryPeriod_unit": "day",
+      
+      "InnerBinaryEpoch": "",
+      "InnerBinaryEpoch_plus": "",
+      "InnerBinaryEpoch_minus": "",
+      "InnerBinaryEpoch_plus_minus": "",
+      "InnerBinaryEpoch_format": "",
+      
+      "InnerBinaryEccentricity": "",
+      "InnerBinaryInclination": "",
+      "InnerBinaryInclination_plus": "",
+      "InnerBinaryInclination_minus": "",
+      "InnerBinaryInclination_plus_minus": "",
+      "InnerBinaryInclination_unit": "",
+      
+      "InnerBinaryComponent1_M": "",
+      "InnerBinaryComponent1_M_plus": "",
+      "InnerBinaryComponent1_M_minus": "",
+      "InnerBinaryComponent1_M_plus_minus": "",
+      "InnerBinaryComponent1_M_unit": "",
+      
+      "InnerBinaryComponent2_M": "",
+      "InnerBinaryComponent2_M_plus": "",
+      "InnerBinaryComponent2_M_minus": "",
+      "InnerBinaryComponent2_M_plus_minus": "",
+      "InnerBinaryComponent2_M_unit": "",
+      
+      "InnerBinaryTotalMass": "",
+      "InnerBinaryTotalMass_plus": "",
+      "InnerBinaryTotalMass_minus": "",
+      "InnerBinaryTotalMass_plus_minus": "",
+      "InnerBinaryTotalMass_unit": "",
+      
+      "InnerBinarySemiMajorAxis": "",
+      "InnerBinarySemiMajorAxis_plus": "",
+      "InnerBinarySemiMajorAxis_minus": "",
+      "InnerBinarySemiMajorAxis_plus_minus": "",
+      "InnerBinarySemiMajorAxis_unit": "",
+      
+      "NumberOfEclipseTimings": "",
+      "TimingBaseline": "5.2",
+      "TimingBaseline_plus": "",
+      "TimingBaseline_minus": "",
+      "TimingBaseline_plus_minus": "",
+      "TimingBaseline_unit": "year",
+      
+      "EclipseTimingType": "primary",
+      "EclipseTimingMethod": "",
+      "EclipseTimingSource": [],
+      
+      "EclipseTime": [],
+      "EclipseTime_err": [],
+      "EclipseTime_format": "",
+      
+      "EclipseCycleNumber": [],
+      "EclipseType": [],
+      
+      "OC_value": [],
+      "OC_err": [],
+      "OC_unit": "",
+      
+      "OC_RMS": "",
+      "OC_RMS_plus": "",
+      "OC_RMS_minus": "",
+      "OC_RMS_plus_minus": "",
+      "OC_RMS_unit": "",
+      
+      "ETV_amplitude": "14.2",
+      "ETV_amplitude_plus": "",
+      "ETV_amplitude_minus": "",
+      "ETV_amplitude_plus_minus": "0.3",
+      "ETV_amplitude_unit": "second",
+      
+      "ETV_period": "5.2",
+      "ETV_period_plus": "",
+      "ETV_period_minus": "",
+      "ETV_period_plus_minus": "0.1",
+      "ETV_period_unit": "year",
+      
+      "NumberOfETVCyclesCovered": "",
+      "PrimarySecondaryETVRelation": "",
+      
+      "ETV_companion_model": "LTTE",
+      
+      "OuterOrbitalPeriod": "5.2",
+      "OuterOrbitalPeriod_plus": "",
+      "OuterOrbitalPeriod_minus": "",
+      "OuterOrbitalPeriod_plus_minus": "0.1",
+      "OuterOrbitalPeriod_unit": "year",
+      
+      "OuterEccentricity": "",
+      "OuterEccentricity_plus": "",
+      "OuterEccentricity_minus": "",
+      "OuterEccentricity_plus_minus": "",
+      
+      "OuterArgumentOfPeriastron": "",
+      "OuterArgumentOfPeriastron_plus": "",
+      "OuterArgumentOfPeriastron_minus": "",
+      "OuterArgumentOfPeriastron_plus_minus": "",
+      "OuterArgumentOfPeriastron_unit": "",
+      
+      "OuterTimeOfPeriastron": "",
+      "OuterTimeOfPeriastron_plus": "",
+      "OuterTimeOfPeriastron_minus": "",
+      "OuterTimeOfPeriastron_plus_minus": "",
+      "OuterTimeOfPeriastron_format": "",
+      
+      "OuterInclination": "",
+      "OuterInclination_plus": "",
+      "OuterInclination_minus": "",
+      "OuterInclination_plus_minus": "",
+      "OuterInclination_unit": "",
+      "OuterInclination_assumed": "",
+      
+      "OuterSemiMajorAxis": "",
+      "OuterSemiMajorAxis_plus": "",
+      "OuterSemiMajorAxis_minus": "",
+      "OuterSemiMajorAxis_plus_minus": "",
+      "OuterSemiMajorAxis_unit": "",
+      
+      "LTTE_amplitude": "14.2",
+      "LTTE_amplitude_plus": "",
+      "LTTE_amplitude_minus": "",
+      "LTTE_amplitude_plus_minus": "0.3",
+      "LTTE_amplitude_unit": "second",
+      
+      "InnerBinaryProjectedOrbit_a_sini": "",
+      "InnerBinaryProjectedOrbit_a_sini_plus": "",
+      "InnerBinaryProjectedOrbit_a_sini_minus": "",
+      "InnerBinaryProjectedOrbit_a_sini_plus_minus": "",
+      "InnerBinaryProjectedOrbit_a_sini_unit": "",
+      
+      "CompanionMassFunction": "",
+      "CompanionMassFunction_plus": "",
+      "CompanionMassFunction_minus": "",
+      "CompanionMassFunction_plus_minus": "",
+      "CompanionMassFunction_unit": "",
+      
+      "CompanionMinimumMass": "4.2",
+      "CompanionMinimumMass_plus": "",
+      "CompanionMinimumMass_minus": "",
+      "CompanionMinimumMass_plus_minus": "0.5",
+      "CompanionMinimumMass_unit": "MJ",
+      
+      "CompanionEstimatedMass": "",
+      "CompanionEstimatedMass_plus": "",
+      "CompanionEstimatedMass_minus": "",
+      "CompanionEstimatedMass_plus_minus": "",
+      "CompanionEstimatedMass_unit": "",
+      
+      "CompanionMassRegime": "planetary",
+      
+      "DynamicalETV_amplitude": "",
+      "DynamicalETV_amplitude_plus": "",
+      "DynamicalETV_amplitude_minus": "",
+      "DynamicalETV_amplitude_plus_minus": "",
+      "DynamicalETV_amplitude_unit": "",
+      
+      "MutualInclination": "",
+      "MutualInclination_plus": "",
+      "MutualInclination_minus": "",
+      "MutualInclination_plus_minus": "",
+      "MutualInclination_unit": "",
+      
+      "OuterOrbitCoverageFraction": "",
+      "OuterOrbitCoverageFraction_plus": "",
+      "OuterOrbitCoverageFraction_minus": "",
+      "OuterOrbitCoverageFraction_plus_minus": "",
+      
+      "CompanionRVPredictedAmplitude": "",
+      "CompanionRVPredictedAmplitude_plus": "",
+      "CompanionRVPredictedAmplitude_minus": "",
+      "CompanionRVPredictedAmplitude_plus_minus": "",
+      "CompanionRVPredictedAmplitude_unit": "",
+      
+      "HasQuadraticEphemeris": "",
+      
+      "QuadraticEphemerisCoefficient": "",
+      "QuadraticEphemerisCoefficient_plus": "",
+      "QuadraticEphemerisCoefficient_minus": "",
+      "QuadraticEphemerisCoefficient_plus_minus": "",
+      "QuadraticEphemerisCoefficient_unit": "",
+      
+      "PeriodDerivative_Pdot": "",
+      "PeriodDerivative_Pdot_plus": "",
+      "PeriodDerivative_Pdot_minus": "",
+      "PeriodDerivative_Pdot_plus_minus": "",
+      "PeriodDerivative_Pdot_unit": "",
+      
+      "FractionalPeriodDerivative_Pdot_over_P": "",
+      "FractionalPeriodDerivative_Pdot_over_P_plus": "",
+      "FractionalPeriodDerivative_Pdot_over_P_minus": "",
+      "FractionalPeriodDerivative_Pdot_over_P_plus_minus": "",
+      "FractionalPeriodDerivative_Pdot_over_P_unit": "",
+      
+      "OrbitalDecayTimescale": "",
+      "OrbitalDecayTimescale_plus": "",
+      "OrbitalDecayTimescale_minus": "",
+      "OrbitalDecayTimescale_plus_minus": "",
+      "OrbitalDecayTimescale_unit": "",
+      
+      "OrbitalDecaySignificance": "",
+      "OrbitalDecaySignificance_unit": "",
+      
+      "PeriodChangeDirection": "",
+      "ProposedPeriodChangeMechanism": "",
+      
+      "TidalQualityFactor_Qprime": "",
+      "TidalQualityFactor_Qprime_plus": "",
+      "TidalQualityFactor_Qprime_minus": "",
+      "TidalQualityFactor_Qprime_plus_minus": "",
+      "TidalQualityFactor_Qprime_lower_limit": "",
+      "TidalQualityFactor_Qprime_upper_limit": "",
+      
+      "MassTransferRate": "",
+      "MassTransferRate_plus": "",
+      "MassTransferRate_minus": "",
+      "MassTransferRate_plus_minus": "",
+      "MassTransferRate_unit": "",
+      
+      "LinearEphemeris_chi2": "",
+      "LinearEphemeris_reduced_chi2": "",
+      "LinearEphemeris_BIC": "",
+      
+      "QuadraticEphemeris_chi2": "",
+      "QuadraticEphemeris_reduced_chi2": "",
+      "QuadraticEphemeris_BIC": "",
+      
+      "CompanionModel_chi2": "",
+      "CompanionModel_reduced_chi2": "",
+      "CompanionModel_BIC": "",
+      
+      "QuadraticPlusCompanionModel_chi2": "",
+      "QuadraticPlusCompanionModel_reduced_chi2": "",
+      "QuadraticPlusCompanionModel_BIC": "",
+      
+      "PreferredETVModel": "",
+      "PreferredModel_delta_BIC": "",
+      
+      "ApsidalMotionPossible": "",
+      "ApsidalPrecessionPeriod": "",
+      "ApsidalPrecessionPeriod_plus": "",
+      "ApsidalPrecessionPeriod_minus": "",
+      "ApsidalPrecessionPeriod_plus_minus": "",
+      "ApsidalPrecessionPeriod_unit": "",
+      
+      "MagneticActivityPossible": "",
+      "ApplegateMechanismPossible": "",
+      "StarspotActivityFlag": "",
+      "MassTransferEvidenceFlag": "",
+      "ThirdLightEvidenceFlag": "",
+      "TimingSystematicsFlag": "",
+      "TimingSystematicsDescription": "",
+      
+      "FollowupPriority": "high",
+      "RequiredFollowup": ["radial_velocity", "astrometry"],
+      
+      "FutureTimingPrecisionRequired": "",
+      "FutureTimingPrecisionRequired_unit": "",
+      
+      "PredictedOCAtNextObservation": "",
+      "PredictedOCAtNextObservation_plus": "",
+      "PredictedOCAtNextObservation_minus": "",
+      "PredictedOCAtNextObservation_plus_minus": "",
+      "PredictedOCAtNextObservation_unit": "",
+      
+      "ETV_data_source": "",
+      "ETV_analysis_software": "",
+      "ETV_analysis_version": "",
+      
+      "ETV_reference": []
+    }
+  ]
+}
+
+Example 2 — Orbital decay detection
+
+Input:
+"DP Leo shows a quadratic O-C variation with Q = 1.2 × 10^-11 day/cycle^2. 
+This implies a period derivative Pdot = 7.6 ± 0.3 × 10^-12 day/day. 
+The orbital decay timescale is 8.4 ± 0.5 Myr."
+
+Output:
+{
+  "targets": [
+    {
+      "SystemName": "DP Leo",
+      "Is_ETV_System": "true",
+      "Has_ETV_Analysis": "true",
+      "ETV_candidate_type": "orbital_decay",
+      "ETV_candidate_status": "strong",
+      "ETV_detection_significance": "",
+      "ETV_detection_significance_plus": "",
+      "ETV_detection_significance_minus": "",
+      "ETV_detection_significance_plus_minus": "",
+      "ETV_detection_significance_unit": "",
+      "ETV_detection_significance_description": "",
+      "ETV_selection_reason": "Quadratic ephemeris detected",
+      "ETV_notes": "",
+      
+      "InnerBinaryPeriod": "",
+      "InnerBinaryPeriod_plus": "",
+      "InnerBinaryPeriod_minus": "",
+      "InnerBinaryPeriod_plus_minus": "",
+      "InnerBinaryPeriod_unit": "",
+      
+      "InnerBinaryEpoch": "",
+      "InnerBinaryEpoch_plus": "",
+      "InnerBinaryEpoch_minus": "",
+      "InnerBinaryEpoch_plus_minus": "",
+      "InnerBinaryEpoch_format": "",
+      
+      "InnerBinaryEccentricity": "",
+      "InnerBinaryInclination": "",
+      "InnerBinaryInclination_plus": "",
+      "InnerBinaryInclination_minus": "",
+      "InnerBinaryInclination_plus_minus": "",
+      "InnerBinaryInclination_unit": "",
+      
+      "InnerBinaryComponent1_M": "",
+      "InnerBinaryComponent1_M_plus": "",
+      "InnerBinaryComponent1_M_minus": "",
+      "InnerBinaryComponent1_M_plus_minus": "",
+      "InnerBinaryComponent1_M_unit": "",
+      
+      "InnerBinaryComponent2_M": "",
+      "InnerBinaryComponent2_M_plus": "",
+      "InnerBinaryComponent2_M_minus": "",
+      "InnerBinaryComponent2_M_plus_minus": "",
+      "InnerBinaryComponent2_M_unit": "",
+      
+      "InnerBinaryTotalMass": "",
+      "InnerBinaryTotalMass_plus": "",
+      "InnerBinaryTotalMass_minus": "",
+      "InnerBinaryTotalMass_plus_minus": "",
+      "InnerBinaryTotalMass_unit": "",
+      
+      "InnerBinarySemiMajorAxis": "",
+      "InnerBinarySemiMajorAxis_plus": "",
+      "InnerBinarySemiMajorAxis_minus": "",
+      "InnerBinarySemiMajorAxis_plus_minus": "",
+      "InnerBinarySemiMajorAxis_unit": "",
+      
+      "NumberOfEclipseTimings": "",
+      "TimingBaseline": "",
+      "TimingBaseline_plus": "",
+      "TimingBaseline_minus": "",
+      "TimingBaseline_plus_minus": "",
+      "TimingBaseline_unit": "",
+      
+      "EclipseTimingType": "",
+      "EclipseTimingMethod": "",
+      "EclipseTimingSource": [],
+      
+      "EclipseTime": [],
+      "EclipseTime_err": [],
+      "EclipseTime_format": "",
+      
+      "EclipseCycleNumber": [],
+      "EclipseType": [],
+      
+      "OC_value": [],
+      "OC_err": [],
+      "OC_unit": "",
+      
+      "OC_RMS": "",
+      "OC_RMS_plus": "",
+      "OC_RMS_minus": "",
+      "OC_RMS_plus_minus": "",
+      "OC_RMS_unit": "",
+      
+      "ETV_amplitude": "",
+      "ETV_amplitude_plus": "",
+      "ETV_amplitude_minus": "",
+      "ETV_amplitude_plus_minus": "",
+      "ETV_amplitude_unit": "",
+      
+      "ETV_period": "",
+      "ETV_period_plus": "",
+      "ETV_period_minus": "",
+      "ETV_period_plus_minus": "",
+      "ETV_period_unit": "",
+      
+      "NumberOfETVCyclesCovered": "",
+      "PrimarySecondaryETVRelation": "",
+      
+      "ETV_companion_model": "not_applicable",
+      
+      "OuterOrbitalPeriod": "",
+      "OuterOrbitalPeriod_plus": "",
+      "OuterOrbitalPeriod_minus": "",
+      "OuterOrbitalPeriod_plus_minus": "",
+      "OuterOrbitalPeriod_unit": "",
+      
+      "OuterEccentricity": "",
+      "OuterEccentricity_plus": "",
+      "OuterEccentricity_minus": "",
+      "OuterEccentricity_plus_minus": "",
+      
+      "OuterArgumentOfPeriastron": "",
+      "OuterArgumentOfPeriastron_plus": "",
+      "OuterArgumentOfPeriastron_minus": "",
+      "OuterArgumentOfPeriastron_plus_minus": "",
+      "OuterArgumentOfPeriastron_unit": "",
+      
+      "OuterTimeOfPeriastron": "",
+      "OuterTimeOfPeriastron_plus": "",
+      "OuterTimeOfPeriastron_minus": "",
+      "OuterTimeOfPeriastron_plus_minus": "",
+      "OuterTimeOfPeriastron_format": "",
+      
+      "OuterInclination": "",
+      "OuterInclination_plus": "",
+      "OuterInclination_minus": "",
+      "OuterInclination_plus_minus": "",
+      "OuterInclination_unit": "",
+      "OuterInclination_assumed": "",
+      
+      "OuterSemiMajorAxis": "",
+      "OuterSemiMajorAxis_plus": "",
+      "OuterSemiMajorAxis_minus": "",
+      "OuterSemiMajorAxis_plus_minus": "",
+      "OuterSemiMajorAxis_unit": "",
+      
+      "LTTE_amplitude": "",
+      "LTTE_amplitude_plus": "",
+      "LTTE_amplitude_minus": "",
+      "LTTE_amplitude_plus_minus": "",
+      "LTTE_amplitude_unit": "",
+      
+      "InnerBinaryProjectedOrbit_a_sini": "",
+      "InnerBinaryProjectedOrbit_a_sini_plus": "",
+      "InnerBinaryProjectedOrbit_a_sini_minus": "",
+      "InnerBinaryProjectedOrbit_a_sini_plus_minus": "",
+      "InnerBinaryProjectedOrbit_a_sini_unit": "",
+      
+      "CompanionMassFunction": "",
+      "CompanionMassFunction_plus": "",
+      "CompanionMassFunction_minus": "",
+      "CompanionMassFunction_plus_minus": "",
+      "CompanionMassFunction_unit": "",
+      
+      "CompanionMinimumMass": "",
+      "CompanionMinimumMass_plus": "",
+      "CompanionMinimumMass_minus": "",
+      "CompanionMinimumMass_plus_minus": "",
+      "CompanionMinimumMass_unit": "",
+      
+      "CompanionEstimatedMass": "",
+      "CompanionEstimatedMass_plus": "",
+      "CompanionEstimatedMass_minus": "",
+      "CompanionEstimatedMass_plus_minus": "",
+      "CompanionEstimatedMass_unit": "",
+      
+      "CompanionMassRegime": "",
+      
+      "DynamicalETV_amplitude": "",
+      "DynamicalETV_amplitude_plus": "",
+      "DynamicalETV_amplitude_minus": "",
+      "DynamicalETV_amplitude_plus_minus": "",
+      "DynamicalETV_amplitude_unit": "",
+      
+      "MutualInclination": "",
+      "MutualInclination_plus": "",
+      "MutualInclination_minus": "",
+      "MutualInclination_plus_minus": "",
+      "MutualInclination_unit": "",
+      
+      "OuterOrbitCoverageFraction": "",
+      "OuterOrbitCoverageFraction_plus": "",
+      "OuterOrbitCoverageFraction_minus": "",
+      "OuterOrbitCoverageFraction_plus_minus": "",
+      
+      "CompanionRVPredictedAmplitude": "",
+      "CompanionRVPredictedAmplitude_plus": "",
+      "CompanionRVPredictedAmplitude_minus": "",
+      "CompanionRVPredictedAmplitude_plus_minus": "",
+      "CompanionRVPredictedAmplitude_unit": "",
+      
+      "HasQuadraticEphemeris": "true",
+      "QuadraticEphemerisCoefficient": "1.2e-11",
+      "QuadraticEphemerisCoefficient_plus": "",
+      "QuadraticEphemerisCoefficient_minus": "",
+      "QuadraticEphemerisCoefficient_plus_minus": "",
+      "QuadraticEphemerisCoefficient_unit": "day/cycle^2",
+      
+      "PeriodDerivative_Pdot": "7.6e-12",
+      "PeriodDerivative_Pdot_plus": "",
+      "PeriodDerivative_Pdot_minus": "",
+      "PeriodDerivative_Pdot_plus_minus": "0.3e-12",
+      "PeriodDerivative_Pdot_unit": "day/day",
+      
+      "FractionalPeriodDerivative_Pdot_over_P": "",
+      "FractionalPeriodDerivative_Pdot_over_P_plus": "",
+      "FractionalPeriodDerivative_Pdot_over_P_minus": "",
+      "FractionalPeriodDerivative_Pdot_over_P_plus_minus": "",
+      "FractionalPeriodDerivative_Pdot_over_P_unit": "",
+      
+      "OrbitalDecayTimescale": "8.4",
+      "OrbitalDecayTimescale_plus": "",
+      "OrbitalDecayTimescale_minus": "",
+      "OrbitalDecayTimescale_plus_minus": "0.5",
+      "OrbitalDecayTimescale_unit": "Myr",
+      
+      "OrbitalDecaySignificance": "",
+      "OrbitalDecaySignificance_unit": "",
+      
+      "PeriodChangeDirection": "decreasing",
+      "ProposedPeriodChangeMechanism": "",
+      
+      "TidalQualityFactor_Qprime": "",
+      "TidalQualityFactor_Qprime_plus": "",
+      "TidalQualityFactor_Qprime_minus": "",
+      "TidalQualityFactor_Qprime_plus_minus": "",
+      "TidalQualityFactor_Qprime_lower_limit": "",
+      "TidalQualityFactor_Qprime_upper_limit": "",
+      
+      "MassTransferRate": "",
+      "MassTransferRate_plus": "",
+      "MassTransferRate_minus": "",
+      "MassTransferRate_plus_minus": "",
+      "MassTransferRate_unit": "",
+      
+      "LinearEphemeris_chi2": "",
+      "LinearEphemeris_reduced_chi2": "",
+      "LinearEphemeris_BIC": "",
+      
+      "QuadraticEphemeris_chi2": "",
+      "QuadraticEphemeris_reduced_chi2": "",
+      "QuadraticEphemeris_BIC": "",
+      
+      "CompanionModel_chi2": "",
+      "CompanionModel_reduced_chi2": "",
+      "CompanionModel_BIC": "",
+      
+      "QuadraticPlusCompanionModel_chi2": "",
+      "QuadraticPlusCompanionModel_reduced_chi2": "",
+      "QuadraticPlusCompanionModel_BIC": "",
+      
+      "PreferredETVModel": "quadratic",
+      "PreferredModel_delta_BIC": "",
+      
+      "ApsidalMotionPossible": "",
+      "ApsidalPrecessionPeriod": "",
+      "ApsidalPrecessionPeriod_plus": "",
+      "ApsidalPrecessionPeriod_minus": "",
+      "ApsidalPrecessionPeriod_plus_minus": "",
+      "ApsidalPrecessionPeriod_unit": "",
+      
+      "MagneticActivityPossible": "",
+      "ApplegateMechanismPossible": "",
+      "StarspotActivityFlag": "",
+      "MassTransferEvidenceFlag": "",
+      "ThirdLightEvidenceFlag": "",
+      "TimingSystematicsFlag": "",
+      "TimingSystematicsDescription": "",
+      
+      "FollowupPriority": "",
+      "RequiredFollowup": [],
+      
+      "FutureTimingPrecisionRequired": "",
+      "FutureTimingPrecisionRequired_unit": "",
+      
+      "PredictedOCAtNextObservation": "",
+      "PredictedOCAtNextObservation_plus": "",
+      "PredictedOCAtNextObservation_minus": "",
+      "PredictedOCAtNextObservation_plus_minus": "",
+      "PredictedOCAtNextObservation_unit": "",
+      
+      "ETV_data_source": "",
+      "ETV_analysis_software": "",
+      "ETV_analysis_version": "",
+      
+      "ETV_reference": []
+    }
+  ]
+}
+
+Example 3 — Uncertain ETV with multiple explanations
+
+Input:
+"V404 Cyg is an eclipsing binary showing eclipse timing residuals of 30 seconds RMS. 
+The period derivative is Pdot = 2.3 × 10^-8 day/day. 
+We consider both Applegate mechanism and apsidal motion as possible causes, 
+but the current data cannot distinguish between them."
+
+Output:
+{
+  "targets": [
+    {
+      "SystemName": "V404 Cyg",
+      "Is_ETV_System": "true",
+      "Has_ETV_Analysis": "true",
+      "ETV_candidate_type": "uncertain",
+      "ETV_candidate_status": "possible",
+      "ETV_detection_significance": "",
+      "ETV_detection_significance_plus": "",
+      "ETV_detection_significance_minus": "",
+      "ETV_detection_significance_plus_minus": "",
+      "ETV_detection_significance_unit": "",
+      "ETV_detection_significance_description": "",
+      "ETV_selection_reason": "Timing residuals detected",
+      "ETV_notes": "Both Applegate mechanism and apsidal motion considered, but current data cannot distinguish between them.",
+      
+      "OC_RMS": "30",
+      "OC_RMS_plus": "",
+      "OC_RMS_minus": "",
+      "OC_RMS_plus_minus": "",
+      "OC_RMS_unit": "second",
+      
+      "PeriodDerivative_Pdot": "2.3e-8",
+      "PeriodDerivative_Pdot_plus": "",
+      "PeriodDerivative_Pdot_minus": "",
+      "PeriodDerivative_Pdot_plus_minus": "",
+      "PeriodDerivative_Pdot_unit": "day/day",
+      
+      "ApsidalMotionPossible": "true",
+      "ApplegateMechanismPossible": "true",
+      
+      "PreferredETVModel": "uncertain",
+      
+      "...": ""
+    }
+  ]
+}
+
+Example 4 — Mentioned-only ETV system (not analyzed in this paper)
+
+Input:
+"In the introduction, we note that CM Dra is a well-known ETV system with a possible third body (Deeg et al. 2000)."
+
+Output:
+{
+  "targets": [
+    {
+      "SystemName": "CM Dra",
+      "Is_ETV_System": "true",
+      "Has_ETV_Analysis": "false",
+      "ETV_candidate_type": "uncertain",
+      "ETV_candidate_status": "",
+      "ETV_detection_significance": "",
+      "ETV_detection_significance_plus": "",
+      "ETV_detection_significance_minus": "",
+      "ETV_detection_significance_plus_minus": "",
+      "ETV_detection_significance_unit": "",
+      "ETV_detection_significance_description": "",
+      "ETV_selection_reason": "Mentioned as example of ETV system with possible third body",
+      "ETV_notes": "Cited from Deeg et al. 2000; this paper does not perform new ETV analysis on this system.",
+      
+      "...": ""
+    }
+  ]
+}
+
+</examples>
+
+
+--------------------------------------------------
+
+<Field_Order>
+
+SystemName,
+
+Is_ETV_System,
+
+Has_ETV_Analysis,
+
+ETV_candidate_type,
+
+ETV_candidate_status,
+
+ETV_detection_significance,
+ETV_detection_significance_plus,
+ETV_detection_significance_minus,
+ETV_detection_significance_plus_minus,
+ETV_detection_significance_unit,
+ETV_detection_significance_description,
+
+ETV_selection_reason,
+
+ETV_notes,
+
+InnerBinaryPeriod,
+InnerBinaryPeriod_plus,
+InnerBinaryPeriod_minus,
+InnerBinaryPeriod_plus_minus,
+InnerBinaryPeriod_unit,
+
+InnerBinaryEpoch,
+InnerBinaryEpoch_plus,
+InnerBinaryEpoch_minus,
+InnerBinaryEpoch_plus_minus,
+InnerBinaryEpoch_format,
+
+InnerBinaryEccentricity,
+
+InnerBinaryInclination,
+InnerBinaryInclination_plus,
+InnerBinaryInclination_minus,
+InnerBinaryInclination_plus_minus,
+InnerBinaryInclination_unit,
+
+InnerBinaryComponent1_M,
+InnerBinaryComponent1_M_plus,
+InnerBinaryComponent1_M_minus,
+InnerBinaryComponent1_M_plus_minus,
+InnerBinaryComponent1_M_unit,
+
+InnerBinaryComponent2_M,
+InnerBinaryComponent2_M_plus,
+InnerBinaryComponent2_M_minus,
+InnerBinaryComponent2_M_plus_minus,
+InnerBinaryComponent2_M_unit,
+
+InnerBinaryTotalMass,
+InnerBinaryTotalMass_plus,
+InnerBinaryTotalMass_minus,
+InnerBinaryTotalMass_plus_minus,
+InnerBinaryTotalMass_unit,
+
+InnerBinarySemiMajorAxis,
+InnerBinarySemiMajorAxis_plus,
+InnerBinarySemiMajorAxis_minus,
+InnerBinarySemiMajorAxis_plus_minus,
+InnerBinarySemiMajorAxis_unit,
+
+NumberOfEclipseTimings,
+
+TimingBaseline,
+TimingBaseline_plus,
+TimingBaseline_minus,
+TimingBaseline_plus_minus,
+TimingBaseline_unit,
+
+EclipseTimingType,
+
+EclipseTimingMethod,
+
+EclipseTimingSource,
+
+EclipseTime,
+EclipseTime_err,
+EclipseTime_format,
+
+EclipseCycleNumber,
+
+EclipseType,
+
+OC_value,
+OC_err,
+OC_unit,
+
+OC_RMS,
+OC_RMS_plus,
+OC_RMS_minus,
+OC_RMS_plus_minus,
+OC_RMS_unit,
+
+ETV_amplitude,
+ETV_amplitude_plus,
+ETV_amplitude_minus,
+ETV_amplitude_plus_minus,
+ETV_amplitude_unit,
+
+ETV_period,
+ETV_period_plus,
+ETV_period_minus,
+ETV_period_plus_minus,
+ETV_period_unit,
+
+NumberOfETVCyclesCovered,
+
+PrimarySecondaryETVRelation,
+
+ETV_companion_model,
+
+OuterOrbitalPeriod,
+OuterOrbitalPeriod_plus,
+OuterOrbitalPeriod_minus,
+OuterOrbitalPeriod_plus_minus,
+OuterOrbitalPeriod_unit,
+
+OuterEccentricity,
+OuterEccentricity_plus,
+OuterEccentricity_minus,
+OuterEccentricity_plus_minus,
+
+OuterArgumentOfPeriastron,
+OuterArgumentOfPeriastron_plus,
+OuterArgumentOfPeriastron_minus,
+OuterArgumentOfPeriastron_plus_minus,
+OuterArgumentOfPeriastron_unit,
+
+OuterTimeOfPeriastron,
+OuterTimeOfPeriastron_plus,
+OuterTimeOfPeriastron_minus,
+OuterTimeOfPeriastron_plus_minus,
+OuterTimeOfPeriastron_format,
+
+OuterInclination,
+OuterInclination_plus,
+OuterInclination_minus,
+OuterInclination_plus_minus,
+OuterInclination_unit,
+
+OuterInclination_assumed,
+
+OuterSemiMajorAxis,
+OuterSemiMajorAxis_plus,
+OuterSemiMajorAxis_minus,
+OuterSemiMajorAxis_plus_minus,
+OuterSemiMajorAxis_unit,
+
+LTTE_amplitude,
+LTTE_amplitude_plus,
+LTTE_amplitude_minus,
+LTTE_amplitude_plus_minus,
+LTTE_amplitude_unit,
+
+InnerBinaryProjectedOrbit_a_sini,
+InnerBinaryProjectedOrbit_a_sini_plus,
+InnerBinaryProjectedOrbit_a_sini_minus,
+InnerBinaryProjectedOrbit_a_sini_plus_minus,
+InnerBinaryProjectedOrbit_a_sini_unit,
+
+CompanionMassFunction,
+CompanionMassFunction_plus,
+CompanionMassFunction_minus,
+CompanionMassFunction_plus_minus,
+CompanionMassFunction_unit,
+
+CompanionMinimumMass,
+CompanionMinimumMass_plus,
+CompanionMinimumMass_minus,
+CompanionMinimumMass_plus_minus,
+CompanionMinimumMass_unit,
+
+CompanionEstimatedMass,
+CompanionEstimatedMass_plus,
+CompanionEstimatedMass_minus,
+CompanionEstimatedMass_plus_minus,
+CompanionEstimatedMass_unit,
+
+CompanionMassRegime,
+
+DynamicalETV_amplitude,
+DynamicalETV_amplitude_plus,
+DynamicalETV_amplitude_minus,
+DynamicalETV_amplitude_plus_minus,
+DynamicalETV_amplitude_unit,
+
+MutualInclination,
+MutualInclination_plus,
+MutualInclination_minus,
+MutualInclination_plus_minus,
+MutualInclination_unit,
+
+OuterOrbitCoverageFraction,
+OuterOrbitCoverageFraction_plus,
+OuterOrbitCoverageFraction_minus,
+OuterOrbitCoverageFraction_plus_minus,
+
+CompanionRVPredictedAmplitude,
+CompanionRVPredictedAmplitude_plus,
+CompanionRVPredictedAmplitude_minus,
+CompanionRVPredictedAmplitude_plus_minus,
+CompanionRVPredictedAmplitude_unit,
+
+HasQuadraticEphemeris,
+
+QuadraticEphemerisCoefficient,
+QuadraticEphemerisCoefficient_plus,
+QuadraticEphemerisCoefficient_minus,
+QuadraticEphemerisCoefficient_plus_minus,
+QuadraticEphemerisCoefficient_unit,
+
+PeriodDerivative_Pdot,
+PeriodDerivative_Pdot_plus,
+PeriodDerivative_Pdot_minus,
+PeriodDerivative_Pdot_plus_minus,
+PeriodDerivative_Pdot_unit,
+
+FractionalPeriodDerivative_Pdot_over_P,
+FractionalPeriodDerivative_Pdot_over_P_plus,
+FractionalPeriodDerivative_Pdot_over_P_minus,
+FractionalPeriodDerivative_Pdot_over_P_plus_minus,
+FractionalPeriodDerivative_Pdot_over_P_unit,
+
+OrbitalDecayTimescale,
+OrbitalDecayTimescale_plus,
+OrbitalDecayTimescale_minus,
+OrbitalDecayTimescale_plus_minus,
+OrbitalDecayTimescale_unit,
+
+OrbitalDecaySignificance,
+OrbitalDecaySignificance_unit,
+
+PeriodChangeDirection,
+
+ProposedPeriodChangeMechanism,
+
+TidalQualityFactor_Qprime,
+TidalQualityFactor_Qprime_plus,
+TidalQualityFactor_Qprime_minus,
+TidalQualityFactor_Qprime_plus_minus,
+TidalQualityFactor_Qprime_lower_limit,
+TidalQualityFactor_Qprime_upper_limit,
+
+MassTransferRate,
+MassTransferRate_plus,
+MassTransferRate_minus,
+MassTransferRate_plus_minus,
+MassTransferRate_unit,
+
+LinearEphemeris_chi2,
+LinearEphemeris_reduced_chi2,
+LinearEphemeris_BIC,
+
+QuadraticEphemeris_chi2,
+QuadraticEphemeris_reduced_chi2,
+QuadraticEphemeris_BIC,
+
+CompanionModel_chi2,
+CompanionModel_reduced_chi2,
+CompanionModel_BIC,
+
+QuadraticPlusCompanionModel_chi2,
+QuadraticPlusCompanionModel_reduced_chi2,
+QuadraticPlusCompanionModel_BIC,
+
+PreferredETVModel,
+
+PreferredModel_delta_BIC,
+
+ApsidalMotionPossible,
+
+ApsidalPrecessionPeriod,
+ApsidalPrecessionPeriod_plus,
+ApsidalPrecessionPeriod_minus,
+ApsidalPrecessionPeriod_plus_minus,
+ApsidalPrecessionPeriod_unit,
+
+MagneticActivityPossible,
+
+ApplegateMechanismPossible,
+
+StarspotActivityFlag,
+
+MassTransferEvidenceFlag,
+
+ThirdLightEvidenceFlag,
+
+TimingSystematicsFlag,
+
+TimingSystematicsDescription,
+
+FollowupPriority,
+
+RequiredFollowup,
+
+FutureTimingPrecisionRequired,
+FutureTimingPrecisionRequired_unit,
+
+PredictedOCAtNextObservation,
+PredictedOCAtNextObservation_plus,
+PredictedOCAtNextObservation_minus,
+PredictedOCAtNextObservation_plus_minus,
+PredictedOCAtNextObservation_unit,
+
+ETV_data_source,
+
+ETV_analysis_software,
+
+ETV_analysis_version,
+
+ETV_reference
+
+</Field_Order>
+
+
+--------------------------------------------------
+
+<field_specific_rules>
+
+Every field must exist.
+
+Missing: ""
+
+--------------------------------------------------
+
+CompanionMassRegime:
+
+Allowed:
+planetary
+brown_dwarf
+stellar
+uncertain
+
+Only extract author classification.
+Do not classify using mass boundaries.
+
+--------------------------------------------------
+
+PeriodChangeDirection:
+
+Allowed:
+decreasing
+increasing
+consistent_with_zero
+
+Only extract explicitly stated conclusions.
+
+--------------------------------------------------
+
+ProposedPeriodChangeMechanism:
+
+Allowed:
+tidal_decay
+gravitational_radiation
+magnetic_braking
+mass_transfer
+mass_loss
+common_envelope
+unknown
+
+Only extract mechanisms discussed by authors.
+
+--------------------------------------------------
+
+FollowupPriority:
+Only extract if explicitly provided.
+
+</field_specific_rules>
+
+
+--------------------------------------------------
+
+<self_check_workflow>
+
+Before returning JSON:
+
+Step 1:
+Identify ALL eclipsing binary systems with ETV-related content (O-C analysis,
+timing residuals, period evolution, third-body timing, etc.).
+
+Step 2:
+Remove ordinary eclipsing binaries with NO ETV signal or ETV context at all.
+
+Step 3:
+Remove non-eclipsing-binary timing systems (pulsar timing, pulsation timing,
+TTV, etc.).
+
+Step 4:
+Merge duplicated mentions of the same system inside the same paper.
+
+Step 5:
+Preserve independent measurements.
+
+Step 6:
+Preserve independent models.
+
+Step 7:
+Validate numerical values.
+
+Step 8:
+Validate uncertainties.
+
+Step 9:
+Validate units.
+
+Step 10:
+Check no derived quantities exist.
+
+Step 11:
+Check boolean fields.
+
+Step 12:
+Check array correspondence.
+
+Step 13:
+Fill missing values with "".
+
+Step 14:
+Return JSON only.
+
+</self_check_workflow>
+
+
+--------------------------------------------------
+
+<extraction_priority>
+
+Priority 1:
+Eclipse timing measurements
+
+Priority 2:
+O-C values and residuals
+
+Priority 3:
+ETV model parameters
+
+Priority 4:
+Third-body interpretation
+
+Priority 5:
+Orbital decay interpretation
+
+Priority 6:
+Alternative explanations
+
+Priority 7:
+Follow-up information
+
+Priority 8:
+Systems only mentioned (examples / rejected candidates):
+record the system with Is_ETV_System=true, Has_ETV_Analysis=false,
+ETV_candidate_type="uncertain" or "other",
+and describe context in ETV_selection_reason and ETV_notes.
+
+</extraction_priority>
+
+
+--------------------------------------------------
+
+<final_instruction>
+
+Remember:
+
+This task is information extraction.
+
+The model is a scientific catalog curator.
+
+Do not analyze.
+Do not solve equations.
+Do not improve the paper.
+
+Only information explicitly written in the paper
+may enter the catalog.
+
+When uncertain:
+leave empty.
+
+Output JSON only.
+
+</final_instruction>
+
 """

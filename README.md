@@ -13,7 +13,39 @@ Official implementation of the paper
 
 **Authors**
 
-Jun-Hao Peng, Yi-Cheng Rui, Peng-Ju Wang, Wen-Yong Kang, Yu-Long Gao, Zheng-Jun Du
+Jun-Hao Peng, Yi-Cheng Rui, Peng-Ju Wang, Wen-Yong Kang, Yu-Long Gao, Fa-Bo Feng, Yun-Hai Wang, Zheng-Jun Du
+
+*Jun-Hao Peng and Yi-Cheng Rui contributed equally to this work. Corresponding author: Zheng-Jun Du.*
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Pipeline](#pipeline)
+- [Highlights](#highlights)
+- [Key Results](#key-results)
+- [Repository Structure](#repository-structure)
+- [Repository Description](#repository-description)
+- [Repository Contents](#repository-contents)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Input Data](#input-data)
+- [Output](#output)
+- [Supported Models](#supported-models)
+- [Usage](#usage)
+- [Optional Arguments](#optional-arguments)
+- [Benchmark Evaluation](#benchmark-evaluation)
+- [Reproducing Figures](#reproducing-figures)
+- [Scientific Results](#scientific-results)
+- [Data Availability](#data-availability)
+- [Future Outlook](#future-outlook)
+- [Citation](#citation)
+- [Related Resources](#related-resources)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+- [Contributing](#contributing)
+- [Contact](#contact)
 
 ---
 
@@ -27,13 +59,18 @@ The complete workflow consists of two major stages:
 
 1. **Paper Filtering**
    - Automatically screens approximately **340,000** arXiv astrophysical papers.
-   - Identifies publications containing brown dwarf observations.
+   - Identifies publications containing the target objects (e.g., brown dwarfs).
 
 2. **Catalog Extraction**
    - Downloads PDFs automatically.
    - Extracts celestial objects and physical parameters.
    - Preserves literature provenance.
-   - Produces a structured CSV catalog.
+   - Produces structured CSV catalogs.
+
+The framework is applied to **two downstream applications** in the paper:
+
+- **Brown dwarf catalog extraction** for statistical studies.
+- **Eclipse timing variation (ETV) catalog extraction** for constructing a follow-up observation target list.
 
 ---
 
@@ -43,17 +80,18 @@ The complete workflow consists of two major stages:
 <img src="Figures/Pipeline.png" width="900">
 </p>
 
-**Figure 2.** Overview of the automated literature-mining pipeline used for constructing the brown dwarf catalog.
+**Figure 2.** Overview of the automated literature-mining pipeline used for constructing celestial catalogs.
 
 ---
 
 ## Highlights
 
 - Automated processing of **340,000+** arXiv papers
+- Two downstream applications: **brown dwarf catalog** and **ETV target list**
 - Literature-centric astronomical catalog
 - Provenance-preserving information extraction
 - Parallel PDF processing
-- Multi-model LLM benchmark
+- Multi-model LLM benchmark (including agent-based evaluation)
 - Reproducible scientific analysis
 
 ---
@@ -62,11 +100,16 @@ The complete workflow consists of two major stages:
 
 | Metric | Result |
 |---------|--------|
-| Papers processed | **1,410** |
-| Unique brown dwarfs | **17,793** |
-| Measurement records | **41064** |
-| Processing time | **~40 minutes** |
-| Total API cost | **$22.36** |
+| Papers processed (brown dwarf) | **1,410** |
+| Papers processed (ETV) | **261** |
+| Brown dwarf measurement records | **47,266** |
+| Unique standardized identifiers (brown dwarfs) | **14,682** |
+| SIMBAD-retrievable brown dwarfs | **5,286** |
+| ETV measurement records | **6,326** |
+| Unique ETV candidates for follow-up | **345** |
+| Observable ETV targets (at least one season) | **129** |
+| Processing time | **~100 minutes** (6,017 s) |
+| Total API cost | **$59.23** |
 | Selected model | **DeepSeek-V4-Flash** |
 | Best F1 score | **94.67%** |
 
@@ -79,17 +122,19 @@ The complete workflow consists of two major stages:
 ├── Figures/                                   # Figures used in the paper
 │   ├── Pipeline.png
 │   ├── Pipeline.pdf
-│   ├── arxiv_astrophysics_yearly.pdf
-│   ├── catalog_summary.pdf
-│   ├── age_temp_cooling_evolution.pdf
-│   ├── kinematic_analysis.pdf
-│   └── mass_semimajor.pdf
+│   ├── arxiv_astrophysics_yearly.pdf          # Figure 1
+│   ├── database_comparison.pdf                # Figure 3
+│   ├── brown_dwarf_histograms_3panel.pdf      # Figure 4
+│   ├── etv_statistics_panel.pdf               # Figure 5
+│   └── aitoff_manuscript.pdf                  # Figure 6
 │
 ├── analysis_experiment/                       # Scripts for reproducing figures
-│   ├── catalog_summary.py
-│   ├── age_temp_cooling_evolution.py
-│   ├── kinematic_analysis.py
-│   └── mass_semimajor.py
+│   ├── arxiv_paper_statistics.py              # Figure 1: arXiv paper statistics
+│   ├── database_comparison.py                 # Figure 3: catalog comparison
+│   ├── brown_dwarf_histograms.py              # Figure 4: parameter histograms
+│   ├── etv_statistics.py                      # Figure 5: ETV statistics
+│   ├── aitoff_sky_map.py                      # Figure 6: Aitoff all-sky map
+│   └── etv_observable_targets.py              # ETV post-processing pipeline
 │
 ├── valid_experiments/                         # LLM benchmark experiments
 │   ├── dataset.xlsx
@@ -101,13 +146,24 @@ The complete workflow consists of two major stages:
 │   ├── valid_set_deepseek_v4_pro.csv
 │   ├── valid_set_gemini_3_5_flash.csv
 │   ├── valid_set_gpt_5_4_mini.csv
+│   ├── valid_set_gpt_5_6_sol.csv
 │   └── valid_set_qwen_long.csv
 │
-├── brown_dwarf.csv                            # Final brown dwarf catalog
+├── etv_experiments/                           # ETV follow-up target products
+│   ├── observable_targets_spring.csv          # 24 targets
+│   ├── observable_targets_summer.csv          # 72 targets
+│   ├── observable_targets_autumn.csv          # 96 targets
+│   ├── observable_targets_winter.csv          # 23 targets
+│   ├── all_unique_observable_targets.csv      # 129 unique targets
+│   ├── etv_all_seasons_altitude.csv           # 345 candidates with seasonal altitudes
+│   └── season_comparison_report.csv           # Seasonal comparison report
+│
+├── brown_dwarf.csv                            # Final brown dwarf catalog (47,266 records)
+├── etv.csv                                    # Final ETV catalog (6,326 records)
 ├── config.py                                 # Configuration file
 ├── extraction_chain_stream_parallel.py        # Main extraction pipeline
 ├── filter_chain.py                           # Paper filtering pipeline
-├── prompts.py                               # Prompt templates
+├── prompts.py                               # Prompt templates (TEST / FILTER / BROWN_DWARF / ETV)
 ├── requirements.txt                         # Python dependencies
 ├── validate_brown_dwarf.json                # Filtered paper list
 └── README.md
@@ -123,10 +179,12 @@ The complete workflow consists of two major stages:
 | **Figures/** | Publication-quality figures used in the paper |
 | **analysis_experiment/** | Scripts for reproducing all scientific figures |
 | **valid_experiments/** | Benchmark datasets and evaluation results |
+| **etv_experiments/** | ETV follow-up target lists and seasonal products |
 | **brown_dwarf.csv** | Final literature-centric brown dwarf catalog |
+| **etv.csv** | Final ETV measurement catalog |
 | **filter_chain.py** | LLM-based paper filtering from arXiv |
 | **extraction_chain_stream_parallel.py** | Parallel extraction pipeline |
-| **prompts.py** | Prompt templates used for information extraction |
+| **prompts.py** | Prompt templates: TEST (benchmark), FILTER, BROWN_DWARF and ETV extraction prompts |
 | **config.py** | API configuration and runtime settings |
 | **requirements.txt** | Required Python packages |
 
@@ -168,26 +226,26 @@ Included files
 
 Scripts used to generate all figures presented in the paper, including
 
-- parameter distributions
-- cooling evolution
-- kinematic analysis
-- orbital properties
+- arXiv paper statistics
+- database comparison
+- brown dwarf parameter distributions
+- ETV statistics
+- ETV sky distribution
 
-All figures can be reproduced directly from the released catalog.
+All figures can be reproduced directly from the released catalogs.
 
 ---
 
-### 4. Brown Dwarf Catalog
+### 4. Celestial Catalogs
 
-The released catalog contains
+The released catalogs contain
 
-- **17,793** unique brown dwarfs (deduplicated by Name field)
-- **41064** literature measurement records
+- **Brown dwarf catalog**: 47,266 measurement records, 14,682 unique standardized identifiers (5,286 retrievable in SIMBAD), and 216 extracted fields.
+- **ETV catalog**: 6,326 measurement records covering more than 2,000 objects, with 345 unique ETV candidates for follow-up confirmation and 129 observable targets from the Lenghu site.
 
 Each record preserves the original publication provenance, enabling literature-level analyses instead of only object-level summaries.
 
 ---
-
 
 ## Installation
 
@@ -205,6 +263,7 @@ The pipeline has been tested with the following software environment.
 | SciPy | 1.16.1 |
 | Matplotlib | 3.10.6 |
 | PyMuPDF | 1.26.7 |
+| Astropy | 7.2.1 |
 
 All additional dependencies can be installed via
 
@@ -292,43 +351,67 @@ depending on your deployment environment.
 
 The pipeline accepts astrophysical papers obtained from the arXiv repository.
 
-The filtering stage automatically identifies brown dwarf related publications from the downloaded metadata.
+The filtering stage automatically identifies target-object related publications from the downloaded metadata.
 
-The paper list used in this work is provided as
+- **Brown dwarf application**: the static regex step screened about **340,000** arXiv papers and yielded **3,347** candidate papers; the LLM semantic filter further reduced this to **1,410** papers. The filtered paper list is provided as
 
 ```text
 validate_brown_dwarf.json
 ```
 
+- **ETV application**: keyword matching on arXiv abstracts identified **261** relevant papers, which were processed with a customized ETV extraction prompt.
+
 ---
 
 ## Output
 
-The final catalog is exported as
+The final catalogs are exported as
 
 ```text
 brown_dwarf.csv
+etv.csv
 ```
 
 Each row corresponds to **one literature report** rather than one merged object.
 
-Representative fields include
+Representative fields of **brown_dwarf.csv** include
+
+| Field | Description |
+|---------|-------------|
+| Name | Object name as reported in the literature |
+| Target_type | Target category |
+| RA_deg / DEC_deg | Equatorial coordinates |
+| SpectralType | Spectral classification |
+| IsBrownDwarf | Whether classified as a brown dwarf |
+| M / Msini | Mass (with uncertainties and unit) |
+| R | Radius |
+| T_eff | Effective temperature |
+| logg | Surface gravity |
+| Age | Age |
+| SemiMajorAxis | Semi-major axis |
+| IsDiscoveryTarget / DiscoveryMethod | Discovery information |
+| paper_id | arXiv identifier |
+| source_pages | Source pages |
+| simbad_name | Standardized SIMBAD identifier (when matched) |
+
+Representative fields of **etv.csv** include
 
 | Field | Description |
 |---------|-------------|
 | Name | Object name |
-| SpectralType | Spectral classification |
-| Mass_MJ | Mass |
-| Radius_RJ | Radius |
-| EffectiveTemperature_K | Effective temperature |
-| Distance_pc | Distance |
-| ProperMotion_RA_mas_yr | Proper motion (RA) |
-| ProperMotion_Dec_mas_yr | Proper motion (Dec) |
-| Age_Gyr | Age |
-| SemiMajorAxis_AU | Semi-major axis |
+| AlternativeNames | Alternative designations |
+| Is_ETV_candidate | Whether flagged as an ETV candidate |
+| ETV_candidate_type | Candidate type (e.g., uncertain) |
+| ETV_candidate_status | Status classification |
+| ETV_detection_significance | ETV detection significance |
+| ETV_selection_reason | Reason for candidate selection |
+| InnerBinaryPeriod | Inner binary orbital period |
+| InnerBinaryEccentricity / InnerBinaryInclination | Inner binary orbital parameters |
 | paper_id | arXiv identifier |
-| source_pages | Source pages |
-The catalog preserves the original values reported in the literature whenever possible instead of replacing them with normalized or merged measurements.
+| simbad_name / simbad_RA_d / simbad_DEC_d | SIMBAD-matched identifier and coordinates |
+| simbad_V_mag | V-band magnitude from SIMBAD |
+
+The catalogs preserve the original values reported in the literature whenever possible instead of replacing them with normalized or merged measurements.
 
 ---
 
@@ -341,6 +424,7 @@ The extraction framework currently supports multiple Large Language Models throu
 | DeepSeek-V4-Flash | ✅ |
 | DeepSeek-V4-Pro | ✅ |
 | GPT-5.4-Mini | ✅ |
+| GPT-5.6-Sol | ✅ |
 | Claude-Haiku-4.5 | ✅ |
 | Gemini-3.5-Flash | ✅ |
 | Qwen-Long | ✅ |
@@ -362,7 +446,7 @@ The pipeline is fully automated and supports parallel processing.
 
 ## Step 1. Paper Filtering
 
-The first stage identifies publications relevant to brown dwarf studies from the downloaded arXiv metadata.
+The first stage identifies publications relevant to the target objects from the downloaded arXiv metadata.
 
 Run
 
@@ -402,6 +486,8 @@ The final catalog is exported as
 brown_dwarf.csv
 ```
 
+For ETV extraction, the same framework is applied with the customized ETV extraction prompt (`ETV_PROMPT` in `prompts.py`); the released ETV catalog and follow-up target lists are provided in `etv.csv` and `etv_experiments/`.
+
 ---
 
 ## Optional Arguments
@@ -438,6 +524,7 @@ python extraction_chain_stream_parallel.py \
 
 Increasing the number of workers generally improves throughput but also increases API concurrency.
 
+---
 
 ## Benchmark Evaluation
 
@@ -459,81 +546,11 @@ for all supported Large Language Models.
 
 ---
 
-## Reproducing Figures
-
-All analysis scripts are located in
-
-```text
-analysis_experiment/
-```
-
-### Figure 3
-
-Physical parameter distributions
-
-```bash
-python analysis_experiment/catalog_summary.py
-```
-
----
-
-### Figure 4
-
-Cooling evolution
-
-```bash
-python analysis_experiment/age_temp_cooling_evolution.py
-```
-
----
-
-### Figure 5
-
-Brown dwarf kinematics
-
-```bash
-python analysis_experiment/kinematic_analysis.py
-```
-
----
-
-### Figure 6
-
-Mass versus semi-major axis
-
-```bash
-python analysis_experiment/mass_semimajor.py
-```
-
-All figures are exported into
-
-```text
-Figures/
-```
-
-in publication-quality PDF format.
-
----
-
-## Reproducibility
-
-This repository contains everything required to reproduce the experiments reported in the paper, including
-
-- benchmark datasets
-- evaluation scripts
-- extraction prompts
-- analysis scripts
-- generated figures
-- extracted catalog
-
-Running the pipeline with the same configuration should reproduce results that are consistent with those presented in the manuscript, subject to minor stochastic variations introduced by LLM inference.
-
----
-
 ## LLM Benchmark Results
 
 To evaluate the effectiveness of Large Language Models for astronomical information extraction, we constructed a manually annotated benchmark consisting of
 
+- **120 TESS papers** (2025-2026) containing **4,329** annotated celestial entities
 - **Validation set:** 60 papers containing **2,818** annotated entities
 - **Test set:** 60 papers containing **1,511** annotated entities
 
@@ -543,14 +560,17 @@ The benchmark evaluates both celestial object identification and structured para
 
 ### Performance Comparison
 
-| Model | Precision ↑ | Recall ↑ | F1 ↑ | API Time ↓ | Total Time ↓ | Cost ↓ |
-|:------|------------:|---------:|------:|-----------:|-------------:|--------:|
-| Gemini-3.5-Flash | 94.95% | 88.15% | 91.42% | 23.82 s | 5811.4 s | $69.01 |
-| Claude-Haiku-4.5 | 96.04% | 56.00% | 70.75% | 7.84 s | 2657.4 s | $21.06 |
-| GPT-5.4-Mini | 92.21% | 72.25% | 81.02% | **3.56 s** | **888.8 s** | $6.29 |
-| DeepSeek-V4-Pro | **97.00%** | **94.14%** | **95.55%** | 51.90 s | 18343.8 s | $6.86 |
-| **DeepSeek-V4-Flash** | 96.81% | 92.62% | **94.67%** | 19.83 s | 4762.4 s | $1.47 |
-| Qwen-Long | 96.00% | 86.94% | 91.25% | 12.58 s | 4461.0 s | **$0.80** |
+| Model | Precision ↑ | Recall ↑ | F1 ↑ | Total Time ↓ | Cost ↓ | Note |
+|:------|------------:|---------:|------:|-------------:|--------:|:-----|
+| Gemini-3.5-Flash | 94.95% | 88.15% | 91.42% | 5,811 s | $69.01 | Using our Pipeline |
+| Claude-Haiku-4.5 | 96.04% | 56.00% | 70.75% | 2,657 s | $21.06 | Using our Pipeline |
+| GPT-5.4-Mini | 92.21% | 72.25% | 81.02% | **889 s** | $6.29 | Using our Pipeline |
+| DeepSeek-V4-Pro | **97.00%** | **94.14%** | **95.55%** | 18,344 s | $6.86 | Using our Pipeline |
+| **DeepSeek-V4-Flash** | 96.81% | 92.62% | **94.67%** | 4,762 s | **$1.47** | Using our Pipeline |
+| Qwen-Long | 96.00% | 86.94% | 91.25% | 4,461 s | $0.80 | Using our Pipeline |
+| GPT-5.6-Sol | 95.99% | 87.44% | 91.51% | 6,928 s | $118.43 | Using our Pipeline |
+| DeepSeek-V4-Flash | 97.00% | 91.94% | 94.41% | 30,840 s | $16.36 | Run with Agent (Codex v0.154.0) |
+| GPT-5.6-Sol | 92.63% | 69.09% | 79.15% | 18,480 s | $96.89 | Run with Agent (Codex v0.154.0) |
 
 ---
 
@@ -562,7 +582,9 @@ Among all evaluated models, **DeepSeek-V4-Flash** provides the best overall trad
 - inference efficiency,
 - deployment cost
 
-Consequently, it was selected as the default model for constructing the complete brown dwarf catalog presented in this work.
+Compared with DeepSeek-V4-Pro, its F1 decreases by only 0.88 points (94.67 vs. 95.55), while cost drops to about one-fifth ($1.47 vs. $6.86) and time to about one-quarter (4,762 s vs. 18,344 s). Agent-based invocation further erodes efficiency and cost, making agent orchestration unsuitable for large-scale batch extraction.
+
+Consequently, **DeepSeek-V4-Flash** was selected as the default model for constructing the complete brown dwarf and ETV catalogs presented in this work.
 
 ---
 
@@ -601,49 +623,125 @@ The F1 score is used as the primary evaluation metric throughout the paper.
 
 ---
 
-### Discussion
+## Reproducing Figures
 
-The benchmark demonstrates that extraction quality is not solely determined by model size.
+All analysis scripts are located in
 
-- **DeepSeek-V4-Pro** achieved the highest overall extraction accuracy.
-- **GPT-5.4-Mini** exhibited the fastest inference speed.
-- **Qwen-Long** achieved the lowest monetary cost.
-- **DeepSeek-V4-Flash** provided the most balanced performance and was therefore adopted for large-scale catalog construction.
+```text
+analysis_experiment/
+```
+
+### Figure 1. arXiv Paper Statistics
+
+```bash
+python analysis_experiment/arxiv_paper_statistics.py
+```
+
+> Note: this script requires the arXiv metadata snapshot (JSONL). The raw snapshot is large (~800 MB) and is not shipped in this repository; it can be obtained from the Kaggle-hosted Cornell University arXiv dataset. The pre-computed figure is provided in `Figures/`.
+
+---
+
+### Figure 3. Database Comparison
+
+```bash
+python analysis_experiment/database_comparison.py
+```
 
 ---
 
-### Large-scale Deployment
+### Figure 4. Brown Dwarf Parameter Histograms
 
-Using **DeepSeek-V4-Flash**, the complete pipeline processed
-
-- **1,410** astrophysical papers,
-- **17,793** unique brown dwarfs,
-- **41064** literature measurement records,
-
-within approximately **40 minutes** at a total API cost of **$22.36**, demonstrating the practicality of LLM-based astronomical catalog construction for large-scale literature mining.
+```bash
+python analysis_experiment/brown_dwarf_histograms.py
+```
 
 ---
+
+### Figure 5. ETV Statistics
+
+```bash
+python analysis_experiment/etv_statistics.py
+```
+
+---
+
+### Figure 6. Aitoff All-Sky Map
+
+```bash
+python analysis_experiment/aitoff_sky_map.py
+```
+
+---
+
+### ETV Post-Processing
+
+Reproduce the ETV filtering, seasonal observability assessment, and follow-up target lists:
+
+```bash
+python analysis_experiment/etv_observable_targets.py
+```
+
+All figures are exported into
+
+```text
+Figures/
+```
+
+in publication-quality PDF format.
+
+---
+
+## Reproducibility
+
+This repository contains everything required to reproduce the experiments reported in the paper, including
+
+- benchmark datasets
+- evaluation scripts
+- extraction prompts
+- analysis scripts
+- generated figures
+- extracted catalogs
+
+Running the pipeline with the same configuration should reproduce results that are consistent with those presented in the manuscript, subject to minor stochastic variations introduced by LLM inference.
 
 ---
 
 # Scientific Results
 
+## Brown Dwarf Application
+
 The literature-centric brown dwarf catalog enables a variety of statistical analyses that are difficult to perform using conventional object-oriented catalogs.
 
-## Catalog Statistics
+### Catalog Statistics
 
 The current release contains
 
 | Property | Value |
 |----------|------:|
 | Processed papers | 1,410 |
-| Unique brown dwarfs | 17,793 |
-| Literature records | 41064 |
-| Objects with spectral classifications | 11,884 |
-| Objects appearing in multiple papers | 2,413 |
-| Objects with multiple spectral classifications | 1,735 |
+| Measurement records | 47,266 |
+| Unique standardized identifiers | 14,682 |
+| SIMBAD-retrievable entries | 5,286 |
+| Extracted fields | 216 |
+| Mass measurements (13-80 M_Jup) | 1,346 |
+| Effective temperature measurements | 1,917 |
+| Semi-major axis measurements | 363 |
 
 Unlike conventional catalogs, every record preserves its original literature provenance, allowing users to trace the evolution of published measurements over time.
+
+### Cross-Match with Public Databases
+
+An identifier-based cross-match between the SIMBAD-retrievable subset of our catalog (5,286 entries) and five representative public databases shows that our catalog is complementary to existing resources:
+
+| Database | Matched entries | Match fraction |
+|----------|----------------:|---------------:|
+| SIMBAD Confirmed | 2,084 / 3,762 | 39.4% |
+| UltracoolSheet | 1,845 / 3,956 | 34.9% |
+| SIMPLE Archive | 896 / 3,632 | 16.9% |
+| SIMBAD Candidate | 736 / 12,058 | 13.9% |
+| CASPAR | 76 / 133 | 1.4% |
+
+The match fractions should be regarded as conservative lower limits, since the comparison uses exact identifier matching only.
 
 ---
 
@@ -653,7 +751,7 @@ Unlike conventional catalogs, every record preserves its original literature pro
 <img src="Figures/arxiv_astrophysics_yearly.png" width="700">
 </p>
 
-Annual statistics of astrophysics papers collected from the arXiv repository and the subset selected for brown dwarf catalog construction.
+Annual statistics of astrophysics papers collected from the arXiv repository (1992 to June 2026, excluding astro-ph.IM).
 
 ---
 
@@ -667,56 +765,78 @@ Overview of the automated extraction framework, including paper filtering, PDF p
 
 ---
 
-## Figure 3. Catalog Summary
+## Figure 3. Database Comparison
 
 <p align="center">
-<img src="Figures/catalog_summary.png" width="850">
+<img src="Figures/database_comparison.png" width="850">
 </p>
 
-Statistical distributions of the physical parameters preserved in the literature-centric catalog.
+Comparison of the number of brown dwarfs contained in our catalog (5,286 SIMBAD-retrievable entries) and several representative public databases.
 
 ---
 
-## Figure 4. Brown Dwarf Cooling Evolution
+## Figure 4. Brown Dwarf Parameter Histograms
 
 <p align="center">
-<img src="Figures/age_temp_cooling_evolution.png" width="850">
+<img src="Figures/brown_dwarf_histograms_3panel.png" width="850">
 </p>
 
-Relationships among effective temperature, age, and mass for brown dwarfs with complete evolutionary measurements.
+Distribution histograms of (a) mass (N = 1,346, median 41.0 M_Jup), (b) effective temperature (N = 1,917, median 1378 K), and (c) orbital semi-major axis (N = 363, median 2.0 AU) for the deduplicated brown dwarf sample after removing non-physical measurements.
 
 ---
 
-## Figure 5. Kinematic Analysis
+## ETV Application
 
-<p align="center">
-<img src="Figures/kinematic_analysis.png" width="850">
-</p>
+To demonstrate the generalizability of the framework, we applied it to **Eclipse Timing Variation (ETV)** systems with a customized prompt strategy.
 
-Tangential velocity distribution and Galactic population classification derived from proper motions and distances.
+### ETV Statistics
+
+| Property | Value |
+|----------|------:|
+| Papers identified by keyword matching | 261 |
+| Measurement records | 6,326 |
+| Objects covered | >2,000 |
+| Unique ETV candidates (follow-up) | 345 |
+| Observable in spring | 24 |
+| Observable in summer | 72 |
+| Observable in autumn | 96 |
+| Observable in winter | 23 |
+| Unique targets visible in at least one season | 129 |
+
+Candidates were retained with `ETV_candidate_type = uncertain`, excluding statuses `strong`, `confirmed`, and `rejected`, and deduplicated with a coordinate tolerance of 0.001 deg (~3.6 arcsec). Observability was evaluated from the Qinghai Lenghu Observation Base (longitude 93.90 deg E, latitude 38.60 deg N, elevation ~4200 m) with a target altitude above 30 deg and V-band magnitude 10-17 on four representative nights (2026 March 20, June 21, September 23, and December 21 at 14:00 UTC). Autumn is the optimal observing season with 96 observable targets.
 
 ---
 
-## Figure 6. Mass versus Orbital Semi-major Axis
+## Figure 5. ETV Statistics
 
 <p align="center">
-<img src="Figures/mass_semimajor.png" width="850">
+<img src="Figures/etv_statistics_panel.png" width="850">
 </p>
 
-Distribution of brown dwarf companion masses as a function of orbital semi-major axis, illustrating the brown dwarf desert and different orbital regimes.
+Panel (a): distribution of ETV candidate types. Panel (b): distribution of ETV candidate statuses. Panel (c): number of observable ETV targets across the four seasons under Lenghu site conditions.
+
+---
+
+## Figure 6. Aitoff All-Sky Map
+
+<p align="center">
+<img src="Figures/aitoff_manuscript.png" width="850">
+</p>
+
+Sky distribution of the four-season observable ETV targets; 31 spatially dispersed representative targets are labeled, and the complete list is provided in `etv_experiments/`.
 
 ---
 
 ## Scientific Applications
 
-The catalog supports numerous research applications, including
+The catalogs support numerous research applications, including
 
 - Literature-based brown dwarf catalog construction
+- ETV follow-up target-list generation
 - Evolution of spectral classifications
 - Comparison of independent physical measurements
 - Population statistics
 - Brown dwarf cooling studies
-- Galactic kinematics
 - Companion demographics
 - Evidence tracing across publications
 - AI-assisted astronomical literature mining
@@ -725,17 +845,17 @@ Because every measurement retains its original publication information, users ca
 
 ---
 
----
-
 # Data Availability
 
-The literature-centric brown dwarf catalog generated in this work is publicly available with this repository.
+The source code, prompts, and extracted catalogs (including the brown dwarf and ETV catalogs) generated in this work are publicly available with this repository.
 
 ## Included Data
 
 | File | Description |
 |------|-------------|
-| `brown_dwarf.csv` | Complete extracted brown dwarf catalog |
+| `brown_dwarf.csv` | Complete extracted brown dwarf catalog (47,266 records) |
+| `etv.csv` | Complete extracted ETV catalog (6,326 records) |
+| `etv_experiments/` | ETV follow-up target lists and seasonal products |
 | `validate_brown_dwarf.json` | Filtered arXiv paper list |
 | `valid_experiments/dataset.xlsx` | Benchmark annotation dataset |
 | `valid_experiments/valid_set.json` | Validation benchmark |
@@ -745,9 +865,9 @@ The literature-centric brown dwarf catalog generated in this work is publicly av
 
 ## Catalog Characteristics
 
-The catalog differs from conventional astronomical catalogs in that **each row corresponds to one literature measurement rather than one merged object**.
+The catalogs differ from conventional astronomical catalogs in that **each row corresponds to one literature measurement rather than one merged object**.
 
-For every extracted record, the catalog preserves
+For every extracted record, the catalogs preserve
 
 - object identifier
 - physical parameters
@@ -757,27 +877,9 @@ For every extracted record, the catalog preserves
 - page number
 - text location
 - original literature expression
+- extraction reasoning (`Reason` field)
 
 This design enables complete provenance tracking and facilitates evidence-based astronomical research.
-
----
-
-## Reproducibility
-
-All experiments presented in the paper can be reproduced using the materials provided in this repository.
-
-The repository includes
-
-- complete extraction prompts
-- benchmark datasets
-- evaluation scripts
-- analysis scripts
-- visualization scripts
-- generated catalog
-
-No proprietary software is required beyond access to the corresponding LLM APIs.
-
----
 
 ---
 
@@ -788,16 +890,16 @@ We are actively extending this project beyond literature-based catalog construct
 Current directions include:
 
 - **Natural-language Catalog Agent.**  
-  We have developed an initial intelligent agent that enables users to query the literature-centric brown dwarf catalog using natural language. The system is currently undergoing security review and usability evaluation before public release.
+  We have developed an initial intelligent agent that enables users to query the literature-centric catalogs using natural language. The system is currently undergoing security review and usability evaluation before public release.
 
 - **Literature Knowledge Base.**  
   We are constructing a knowledge base by encoding astrophysical literature into structured representations. This effort aims to expand the capabilities of the intelligent agent beyond catalog retrieval, enabling evidence tracing, scientific reasoning, and knowledge-aware question answering over the astronomical literature.
 
 - **Expanded Celestial Catalogs.**  
-  Although this work focuses on brown dwarfs, the proposed framework is designed to be generalizable. Future releases will extend the extraction pipeline to additional classes of celestial objects, including exoplanets, stars, galaxies, and other astrophysical sources.
+  Beyond brown dwarfs and ETV systems, the proposed framework is designed to be generalizable. Future releases will extend the extraction pipeline to additional classes of celestial objects, including exoplanets, stars, galaxies, and other astrophysical sources.
 
 - **Continuous Catalog Updates.**  
-  We plan to periodically synchronize newly submitted arXiv papers and update the catalog automatically, allowing the database to evolve together with the astronomical literature.
+  We plan to periodically synchronize newly submitted arXiv papers and update the catalogs automatically, allowing the databases to evolve together with the astronomical literature.
 
 ---
 
@@ -808,13 +910,13 @@ If you find this repository useful in your research, please cite our paper.
 ```bibtex
 @article{peng2026automatic,
   title={Automatic Celestial Catalog Extraction Using Large Language Models},
-  author={Peng, Jun-Hao and Rui, Yi-Cheng and Wang, Peng-Ju and Kang, Wen-Yong and Gao, Yu-Long and Du, Zheng-Jun},
+  author={Peng, Jun-Hao and Rui, Yi-Cheng and Wang, Peng-Ju and Kang, Wen-Yong and Gao, Yu-Long and Feng, Fa-Bo and Wang, Yun-Hai and Du, Zheng-Jun},
   journal={},
   year={2026}
 }
 ```
 
-If you use the extracted catalog, benchmark dataset, or analysis scripts, please cite both this paper and the corresponding data release.
+If you use the extracted catalogs, benchmark dataset, or analysis scripts, please cite both this paper and the corresponding data release.
 
 ---
 
@@ -825,8 +927,6 @@ If you use the extracted catalog, benchmark dataset, or analysis scripts, please
 - Project homepage *(coming soon)*
 
 These links will be updated after publication.
-
----
 
 ---
 
@@ -852,6 +952,7 @@ We sincerely thank the developers and maintainers of the following open-source p
 
 - arXiv
 - NASA ADS
+- SIMBAD
 - Astropy
 - pandas
 - NumPy
@@ -881,16 +982,36 @@ Please ensure that any submitted code follows the existing coding style and incl
 
 # Contact
 
-For questions regarding the paper, the catalog, or the source code, please contact the authors or corresponding authors.
+For questions regarding the paper, the catalogs, or the source code, please contact the authors or corresponding author.
 
 **Jun-Hao Peng**
-Email: `ys250854100535@qhu.edu.cn`
+Email: `pjh@qhu.edu.cn`
 
 **Yi-Cheng Rui**
 
 Email: `ruiyicheng@sjtu.edu.cn`
 
-**Zheng-Jun Du**
+**Peng-Ju Wang**
+
+Email: `wangpj@qhu.edu.cn`
+
+**Wen-Yong Kang**
+
+Email: `kwy0719@qhu.edu.cn`
+
+**Yu-Long Gao**
+
+Email: `yulong@qhu.edu.cn`
+
+**Fa-Bo Feng**
+
+Email: `ffeng@sjtu.edu.cn`
+
+**Yun-Hai Wang**
+
+Email: `wang.yh@ruc.edu.cn`
+
+**Zheng-Jun Du** (Corresponding author)
 
 Email: `dzj@qhu.edu.cn`
 
